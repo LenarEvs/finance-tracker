@@ -67,4 +67,41 @@
 
 ---
 
+### Этап 2 — Создание основы бэкенда (2026-06-08)
+
+#### Что было сделано
+
+Создан полный скелет `backend/` согласно ARCHITECTURE.md — без бизнес-логики, только структура:
+
+- **`app/main.py`** — FastAPI app factory с lifespan, `/health` эндпоинт, подключение всех роутеров
+- **`app/config.py`** — `pydantic-settings`, читает `.env`
+- **`app/database.py`** — async SQLAlchemy engine + `AsyncSessionLocal` + `Base`
+- **`app/dependencies.py`** — `get_db`, заглушка `get_current_user`
+- **`app/models/`** — 7 ORM-моделей: `User`, `Category`, `Transaction`, `RecurringRule`, `Budget`, `ExchangeRate`, `AuditLog`
+- **`app/schemas/`** — Pydantic v2 схемы для всех доменов + `dashboard.py`
+- **`app/routers/`** — 10 роутеров с объявленными эндпоинтами, тела заглушек `raise NotImplementedError`
+- **`app/services/`** — 7 сервисных классов с интерфейсами методов, реализация отложена
+- **`app/scheduler/jobs.py`** — заглушка APScheduler-джоба для повторяющихся транзакций
+- **`alembic/`** — `env.py` с async-поддержкой, `script.py.mako`, папка `versions/`
+- **`tests/`** — `conftest.py` + 5 тестовых файлов-заглушек
+- **`docker-compose.yml`**, **`docker-compose.override.yml`**, **`.env.example`**
+- **`docker/nginx/nginx.conf`**, **`docker/postgres/init.sql`** (uuid-ossp, pg_trgm)
+- **`backend/Dockerfile`**, **`backend/requirements.txt`**
+
+#### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| `raise NotImplementedError` в роутерах и сервисах | Позволяет проверить структуру импортов без запуска логики |
+| Сервисный слой как отдельные классы (не функции) | Упрощает тестирование через dependency injection |
+| Все роутеры подключены в `main.py` сразу | Swagger `/docs` отобразит полный API с первого запуска |
+| `alembic/env.py` с async engine | Соответствует asyncpg-стеку; синхронный env не поддерживает `asyncpg` |
+
+#### Открытые вопросы
+
+- `get_current_user` в `dependencies.py` — заглушка; реализация JWT придёт на этапе 2 (Auth).
+- `scheduler/__main__` не реализован — нужен entry-point для `python -m app.scheduler`.
+
+---
+
 <!-- Новые записи добавляются ниже по мере продвижения по этапам -->
