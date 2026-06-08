@@ -104,4 +104,42 @@
 
 ---
 
+### Этап 3 — Создание основы фронтенда (2026-06-08)
+
+#### Что было сделано
+
+Создан полный скелет `frontend/` согласно ARCHITECTURE.md — React 18 + TypeScript + Vite:
+
+- **`package.json`** — зависимости: React 18, React Router 6, Axios, Zustand, TanStack Query, Recharts
+- **`vite.config.ts`** — dev-server с proxy `/api` → `http://backend:8000`
+- **`tsconfig.json`** — strict-режим, bundler moduleResolution
+- **`Dockerfile`** — multi-stage: `dev` (Vite HMR) + `build` + `prod` (nginx)
+- **`src/types/index.ts`** — все TypeScript-интерфейсы (User, Transaction, Category, Budget, …)
+- **`src/api/`** — 7 API-модулей: `client.ts` (Axios + interceptors-заглушки), auth, categories, transactions, budgets, recurringRules, dashboard, importExport
+- **`src/store/`** — `authStore.ts` (Zustand: user, tokens, logout), `uiStore.ts` (sidebar toggle)
+- **`src/hooks/`** — `useTransactions`, `useBudgets`, `useDashboard` (React Query обёртки)
+- **`src/components/layout/`** — `Sidebar`, `Topbar`, `PageShell`
+- **`src/components/ui/`** — `Button`, `Modal`
+- **`src/components/charts/`** — `PieChart`, `LineChart` (Recharts-заглушки)
+- **`src/components/forms/`** — `TransactionForm`, `BudgetForm`
+- **`src/pages/`** — 9 страниц: Login, Register, Dashboard, Transactions, Categories, Budgets, RecurringRules, ImportExport, AuditLog
+- **`src/App.tsx`** — React Router с маршрутами для всех страниц, fallback → `/dashboard`
+- **`src/main.tsx`** — корневой render: QueryClientProvider + App
+
+#### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| TanStack Query для server state | Кэш, refetch, invalidation — не дублируем логику в Zustand |
+| Zustand только для auth и UI | Локальное состояние (токены, sidebar) — не нужен сервер |
+| `PageShell` — обёртка для защищённых страниц | Sidebar + Topbar рендерятся один раз, страницы — контент |
+| Axios proxy через Vite `/api` | В dev не нужен CORS; в prod — nginx обрабатывает те же пути |
+
+#### Открытые вопросы
+
+- Защита роутов (guard для неавторизованных) — реализуется после слоя Auth.
+- JWT-интерцепторы в `api/client.ts` — заглушки, ждут `authStore`.
+
+---
+
 <!-- Новые записи добавляются ниже по мере продвижения по этапам -->
