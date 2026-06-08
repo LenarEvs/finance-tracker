@@ -12,6 +12,7 @@ import app.models.recurring_rule  # noqa: F401
 import app.models.budget  # noqa: F401
 import app.models.exchange_rate  # noqa: F401
 import app.models.audit_log  # noqa: F401
+import app.models.refresh_token  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

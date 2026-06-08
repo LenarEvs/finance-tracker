@@ -142,4 +142,42 @@
 
 ---
 
+---
+
+### Этап 4 — JWT авторизация (2026-06-08)
+
+#### Что было сделано
+
+**Бэкенд:**
+- `app/models/refresh_token.py` — ORM-модель таблицы `refresh_tokens` (jti, user_id, expires_at)
+- `app/services/auth.py` — полная реализация `AuthService`: регистрация (bcrypt hash + дубль-email check), вход, выпуск пары токенов, refresh (lookup jti в БД + ротация), logout (удаление jti)
+- `app/dependencies.py` — `get_current_user`: декодирует Bearer-токен, проверяет `type=access`, достаёт User из БД
+- `app/routers/auth.py` — подключены все 4 эндпоинта через `AuthService(db)`
+- `app/routers/users.py` — реализован `GET /users/me`
+- `alembic/versions/0001_initial.py` — первая миграция: все 8 таблиц включая `refresh_tokens`
+- `ARCHITECTURE.md` — добавлена таблица `1.7 refresh_tokens`
+
+**Фронтенд:**
+- `store/authStore.ts` — добавлен `persist` middleware Zustand (токены переживают перезагрузку страницы)
+- `api/client.ts` — request interceptor прикрепляет `Authorization: Bearer`, response interceptor при 401 делает refresh (один промис на параллельные запросы) и повторяет оригинальный запрос
+- `pages/Login.tsx` — форма входа: email + password, вызов `authApi.login`, затем `/users/me`, редирект на dashboard
+- `pages/Register.tsx` — форма регистрации: имя + email + password, обработка 409
+- `App.tsx` — компонент `RequireAuth` защищает все роуты кроме `/login` и `/register`
+
+#### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| `jti` (UUID) в refresh-токене + хранение в БД | Позволяет отозвать конкретный токен при logout; без хранения отзыв невозможен до истечения TTL |
+| Ротация refresh-токенов при каждом refresh | Старый jti удаляется, выпускается новый — детектирует повторное использование украденного токена |
+| Один shared Promise `refreshing` в interceptor | Предотвращает race condition: если несколько запросов вернули 401 одновременно, refresh выполняется один раз |
+| `persist` Zustand в localStorage | Пользователь не разлогинивается при F5; токены хранятся под ключом `auth` |
+| Миграция вручную (не autogenerate) | Нет живого соединения с БД в CI; explicit DDL проще ревьюить |
+
+#### Открытые вопросы / следующий шаг
+
+- Реализовать `PATCH /users/me` и `PATCH /users/me/password`
+- Добавить очистку просроченных refresh-токенов (cron или при логине)
+- Этап 3: Categories и Transactions CRUD
+
 <!-- Новые записи добавляются ниже по мере продвижения по этапам -->

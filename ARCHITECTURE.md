@@ -114,7 +114,21 @@
 
 ---
 
-### 1.7 audit_log
+### 1.7 refresh_tokens
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| id | UUID | PK, default gen_random_uuid() | Primary key |
+| user_id | UUID | FK → users.id, NOT NULL | Owner |
+| jti | UUID | UNIQUE, NOT NULL | JWT ID claim stored in the token |
+| expires_at | TIMESTAMPTZ | NOT NULL | Token expiry |
+| created_at | TIMESTAMPTZ | NOT NULL, default now() | |
+
+**Index:** `(user_id)`, `(jti)` UNIQUE
+
+---
+
+### 1.8 audit_log
 
 | Column | Type | Constraints | Description |
 |---|---|---|---|
