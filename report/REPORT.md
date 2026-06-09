@@ -215,5 +215,48 @@
 
 #### Открытые вопросы / следующий шаг
 
-- Реализация фронтенда: страницы Transactions, Categories, Budgets, Dashboard, RecurringRules, ImportExport, AuditLog
+- Реализация фронтенда: страницы Transactions, Categories, Budgets, Dashboard, RecurringRules, ImportExport, AuditLog ✅
 - Swagger UI доступен по `/docs`
+
+---
+
+### Этап 8 — Верстка фронтенда (2026-06-09)
+
+#### Что было сделано
+
+Реализована полная верстка всех страниц приложения. Все страницы используют inline styles без CSS-фреймворка.
+
+**Layout-компоненты:**
+- `Sidebar` — NavLink с активным состоянием (indigo), 7 пунктов навигации
+- `Topbar` — имя пользователя из authStore + кнопка выхода с logout()
+- `PageShell` — flex-layout: sidebar + content, опциональный `title` prop
+
+**UI-компоненты:**
+- `Button` — варианты primary/secondary/danger, размеры md/sm, disabled state
+- `Modal` — оверлей с click-outside закрытием, опциональный заголовок, настраиваемая ширина
+
+**Страницы:**
+- `Dashboard` — 3 summary-карточки, month picker, PieChart + LineChart (Recharts), топ-5 таблица
+- `Transactions` — фильтр-панель (дата/тип/категория/сумма), таблица с badge типа, пагинация, модальная форма добавления/редактирования
+- `Categories` — сегмент-фильтр (все/расходы/доходы), карточки-сетка с иконкой+цветом, модальная форма с color picker
+- `Budgets` — month picker, карточки с прогресс-баром (зелёный/оранжевый/красный), индикатор превышения
+- `RecurringRules` — таблица с кнопкой паузы/запуска, модальная форма
+- `ImportExport` — две панели: экспорт с фильтрами + drag-and-drop загрузка CSV с маппингом колонок
+- `AuditLog` — фильтр-панель, таблица с цветными бейджами CREATE/UPDATE/DELETE, модальное окно с JSON до/после
+
+**Формы:**
+- `TransactionForm` — тип/дата/категория/сумма/валюта/курс/описание
+- `BudgetForm` — месяц/категория/лимит
+
+#### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| Inline styles без CSS-фреймворка | Нет зависимости от Tailwind/MUI, полный контроль без сборки CSS |
+| Mock-данные в каждой странице | Верстка работает независимо от бэкенда на этом этапе |
+| NavLink из react-router-dom | Active state без ручного управления, синхронно с роутером |
+
+#### Следующий шаг
+
+- Подключить страницы к реальным API через React Query hooks
+- Seed данные через docker compose up
