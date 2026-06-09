@@ -18,6 +18,8 @@ from app.routers import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.seed import seed
+    await seed()
     yield
 
 

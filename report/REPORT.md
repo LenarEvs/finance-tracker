@@ -181,3 +181,39 @@
 - Этап 3: Categories и Transactions CRUD
 
 <!-- Новые записи добавляются ниже по мере продвижения по этапам -->
+
+---
+
+### Этап 3–7 — Основная бизнес-логика бэкенда (2026-06-09)
+
+#### Что было сделано
+
+Реализована вся бизнес-логика бэкенда:
+
+- **`CategoryService`** — CRUD с soft-delete (архивация). Простой select + flush/commit.
+- **`TransactionService`** — CRUD с фильтрацией по дате/категории/типу/валюте, пагинация, запись audit log при каждой операции.
+- **`BudgetService`** — CRUD + `get_progress()`: JOIN бюджетов с категориями, агрегация расходов по периоду, вычисление `percent_used`.
+- **`ExchangeRateService`** — CRUD, `get_latest()` через ORDER BY date DESC LIMIT 1.
+- **`DashboardService`** — 4 аналитических запроса: summary (GROUP BY type), expenses_by_category (JOIN + SUM), trend (to_char + date_trunc за 6 мес), top_categories (LIMIT 5).
+- **`ImportExportService`** — экспорт CSV через `csv.writer`, импорт с валидацией строк, dry-run режим.
+- **`RecurringRuleService`** — CRUD, автовычисление `next_run_date`.
+- **`services/audit.py`** — вспомогательная функция `write_audit()`, используется из TransactionService и BudgetService.
+- **APScheduler** — ежедневный job в `app/scheduler/__main__.py`, создаёт транзакции по активным recurring_rules, обновляет `next_run_date`.
+- **Seed-скрипт** (`app/seed.py`) — 2 пользователя, 12 категорий каждому, 200+ транзакций за 6 месяцев, бюджеты, recurring rules, курсы валют. Запускается при старте приложения (lifespan), idempotent (проверяет дубль по email).
+- **Entrypoint** (`entrypoint.sh`) — запускает `alembic upgrade head` перед стартом uvicorn.
+- **CI** (`.github/workflows/ci.yml`) — lint (ruff) + pytest с PostgreSQL-сервисом.
+- **13+ integration-тестов** по категориям: auth, transactions, budgets, recurring, import/export.
+
+#### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| `write_audit()` как утилита | Переиспользуется в нескольких сервисах без дублирования кода |
+| `amount_base` не пишется в Python-коде | Это `GENERATED ALWAYS AS STORED` колонка PostgreSQL — SQLAlchemy записывает её автоматически |
+| Seed в lifespan с idempotency-check | Удобно для docker compose — не нужна отдельная команда |
+| dry_run в импорте | Позволяет пользователю проверить CSV перед реальной записью |
+
+#### Открытые вопросы / следующий шаг
+
+- Реализация фронтенда: страницы Transactions, Categories, Budgets, Dashboard, RecurringRules, ImportExport, AuditLog
+- Swagger UI доступен по `/docs`

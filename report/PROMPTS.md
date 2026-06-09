@@ -143,3 +143,24 @@
 **Результат:** Реализована полная JWT авторизация. Бэкенд: `AuthService` (bcrypt + python-jose), `RefreshToken` модель и миграция, `get_current_user` dependency, роутеры auth и users. Фронтенд: `authStore` с persist, Axios interceptors (attach + refresh), страницы Login/Register, guard `RequireAuth` в App.tsx.
 
 <!-- Новые промпты добавляются ниже -->
+
+## P-005 · 2026-06-09 · Реализация основной бизнес-логики бэкенда
+
+**Назначение:** Реализовать всю основную бизнес-логику на бэкенде согласно ARCHITECTURE.md: сервисы, роутеры, шедулер, seed-данные, тесты и CI.
+
+**Промпт:**
+```
+Ты senior fullstack разработчик
+
+Контекст:
+Есть базовый каркас приложения трекера личных финансов
+
+Задача:
+Реализуй основную логику на бэкенде указаную в PROJECT.md
+
+Требования
+
+* Следуй ARCHITECTURE.md
+```
+
+**Результат:** Реализованы все сервисы (CategoryService, TransactionService, BudgetService, ExchangeRateService, DashboardService, ImportExportService, RecurringRuleService), вспомогательный audit-утилит, шедулер APScheduler, seed-скрипт (200+ транзакций, 12 категорий, 2 пользователя, бюджеты, recurring-правила). Обновлены все роутеры, добавлены 13+ integration-тестов, CI pipeline (.github/workflows/ci.yml).
