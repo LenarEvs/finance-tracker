@@ -6,6 +6,7 @@ import { Modal } from "../components/ui/Modal";
 import { BudgetForm } from "../components/forms/BudgetForm";
 import { useBudgetProgress, useDeleteBudget } from "../hooks/useBudgets";
 import { useCategories } from "../hooks/useCategories";
+import { CategoryIcon } from "../components/ui/CategoryIcon";
 import { cn } from "../lib/cn";
 
 interface EditState {
@@ -72,7 +73,7 @@ export function Budgets() {
             <div key={bp.budget_id} className="card p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">{getCategoryIcon(bp.category_id)}</span>
+                  <CategoryIcon name={getCategoryIcon(bp.category_id)} size={20} />
                   <span className="font-semibold text-slate-800">{bp.category_name}</span>
                   {overBudget && (
                     <span className="badge bg-red-50 text-red-600 gap-1">

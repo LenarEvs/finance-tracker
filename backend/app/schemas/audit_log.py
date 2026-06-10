@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, IPvAnyAddress, field_serializer
 
 
 class AuditLogResponse(BaseModel):
@@ -12,7 +12,11 @@ class AuditLogResponse(BaseModel):
     action: str
     before_data: dict | None
     after_data: dict | None
-    ip_address: str | None
+    ip_address: IPvAnyAddress | None
     occurred_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("ip_address")
+    def serialize_ip(self, v: IPvAnyAddress | None) -> str | None:
+        return str(v) if v is not None else None

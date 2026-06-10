@@ -333,3 +333,51 @@
 - Tailwind v3 (не v4) — стабильная версия, JIT-режим из коробки
 - `lucide-react` для SVG-иконок интерфейса; эмодзи в категориях остались — это данные пользователя
 - `ResponsiveContainer` в Recharts — ширина чарта адаптируется к контейнеру без магических констант
+
+---
+
+### 2026-06-10 — Исправление 4 багов
+
+**Задача:** Починить иконки в бюджетах и транзакциях, hover на линейном графике, пустой журнал изменений.
+
+**Что сделано:**
+
+**Баг 1 — иконки в бюджетах (Budgets.tsx:75):**  
+`getCategoryIcon()` возвращала строку "t-shirt", которая рендерилась как `{getCategoryIcon()}` — текст напрямую в JSX. Добавлен импорт `CategoryIcon` и заменено на `<CategoryIcon name={getCategoryIcon()} size={20} />`.
+
+**Баг 2 — hover на графике (LineChart.tsx):**  
+Chart.js по умолчанию использует `interaction: { mode: "nearest", intersect: true }`. Поскольку `pointRadius: 0` (точки невидимы), курсор никогда не попадал на точку данных и тултип не появлялся. Добавлен `interaction: { mode: "index", intersect: false }` — тултип теперь появляется при наведении на любую вертикальную полосу графика для обоих датасетов сразу.
+
+**Баг 3 — журнал изменений пустой (CategoryService):**  
+`TransactionService` и `BudgetService` уже писали аудит-записи. `CategoryService` — нет. Поскольку операции с категориями (добавить, переименовать, архивировать) — наиболее частые, журнал оставался пустым. Добавлены вызовы `write_audit` в `create`, `update`, `archive` с полями before/after.
+
+**Ключевые решения:**
+- Иконки в транзакциях (`<CategoryIcon name={c.icon}>`) были правильными — ошибка только в бюджетах
+- Для графика выбран mode "index" вместо "nearest" — показывает оба датасета (доходы + расходы) в одном тултипе
+- В `archive` action задан "DELETE" (семантически архивирование = мягкое удаление)
+
+---
+
+### 2026-06-10 — Диагностика и исправление журнала изменений
+
+**Задача:** Журнал изменений всегда пустой — ни одна запись не отображалась.
+
+**Диагностика:**
+
+1. `SELECT COUNT(*) FROM audit_log` — 9 записей, данные есть.
+2. `docker compose logs backend` — `GET /api/v1/audit-log` возвращает **HTTP 500** `ResponseValidationError`:
+   ```
+   {'type': 'string_type', 'loc': ('response', 1, 'ip_address'),
+    'msg': 'Input should be a valid string',
+    'input': IPv4Address('172.18.0.5')}
+   ```
+
+**Корневая причина:**
+
+SQLAlchemy + psycopg2 читает PostgreSQL `INET`-колонку как Python `ipaddress.IPv4Address`-объект. Pydantic v2 в строгом режиме отказывается приводить `IPv4Address → str` без явного разрешения. Pydantic-схема `AuditLogResponse` объявляла `ip_address: str | None` — при каждом запросе, где хотя бы одна запись содержала IP, endpoint падал с 500.
+
+**Исправление (`schemas/audit_log.py`):**
+- Тип поля заменён на `IPvAnyAddress | None` — принимает и `IPv4Address`, и `IPv6Address`, и строки
+- Добавлен `@field_serializer("ip_address")` для явного приведения к `str` при JSON-сериализации
+
+**Результат:** API возвращает все записи, фронтенд отображает журнал.

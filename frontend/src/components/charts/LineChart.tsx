@@ -49,6 +49,10 @@ export function LineChart({ data }: Props) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: "index" as const,
+      intersect: false,
+    },
     plugins: {
       legend: {
         position: "bottom" as const,
