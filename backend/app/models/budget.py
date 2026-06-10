@@ -3,7 +3,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, ForeignKey, Numeric, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, UUID
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -21,5 +22,5 @@ class Budget(Base):
     category_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)
     year_month: Mapped[str] = mapped_column(String(7), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)

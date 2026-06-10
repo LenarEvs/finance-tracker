@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, CheckConstraint, ForeignKey, String, UniqueConstraint
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, UUID
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -22,4 +23,4 @@ class Category(Base):
     color: Mapped[str] = mapped_column(String(7), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)

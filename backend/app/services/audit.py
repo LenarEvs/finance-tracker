@@ -1,4 +1,4 @@
- """Utility for writing audit log entries."""
+"""Utility for writing audit log entries."""
 import uuid
 from datetime import datetime, timezone
 from typing import Any

@@ -3,7 +3,8 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Numeric, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, UUID
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -25,4 +26,4 @@ class RecurringRule(Base):
     day_of_month: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     next_run_date: Mapped[date] = mapped_column(Date, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)

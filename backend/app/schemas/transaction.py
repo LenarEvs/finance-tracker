@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import uuid
-from datetime import date, datetime
+from datetime import date as Date
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -12,7 +15,7 @@ class TransactionCreate(BaseModel):
     amount: Decimal
     currency: str
     exchange_rate: Decimal = Decimal("1")
-    date: date
+    date: Date
     description: str | None = None
 
 
@@ -21,7 +24,7 @@ class TransactionUpdate(BaseModel):
     amount: Decimal | None = None
     currency: str | None = None
     exchange_rate: Decimal | None = None
-    date: date | None = None
+    date: Date | None = None
     description: str | None = None
 
 
@@ -33,7 +36,7 @@ class TransactionResponse(BaseModel):
     amount: Decimal
     currency: str
     exchange_rate: Decimal
-    date: date
+    date: Date
     description: str | None
     is_recurring_instance: bool
     recurring_rule_id: uuid.UUID | None

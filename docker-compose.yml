@@ -31,6 +31,7 @@ services:
     command: python -m app.scheduler
     environment:
       DATABASE_URL: postgresql+asyncpg://finance_user:${DB_PASSWORD}@postgres/finance
+      SECRET_KEY: ${SECRET_KEY}
     depends_on:
       postgres:
         condition: service_healthy

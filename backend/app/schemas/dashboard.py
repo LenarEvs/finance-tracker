@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -11,7 +12,7 @@ class DashboardSummary(BaseModel):
 
 
 class ExpenseByCategory(BaseModel):
-    category_id: str
+    category_id: uuid.UUID
     category_name: str
     amount: Decimal
     percent: float
@@ -24,7 +25,7 @@ class MonthlyTrend(BaseModel):
 
 
 class TopCategory(BaseModel):
-    category_id: str
+    category_id: uuid.UUID
     category_name: str
     amount: Decimal
     rank: int

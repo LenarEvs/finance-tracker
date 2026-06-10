@@ -3,7 +3,8 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Numeric, String, Text
-from sqlalchemy.dialects.postgresql import TIMESTAMPTZ, UUID
+from sqlalchemy import TIMESTAMP
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -27,5 +28,5 @@ class Transaction(Base):
     description: Mapped[str | None] = mapped_column(Text)
     is_recurring_instance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     recurring_rule_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("recurring_rules.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMPTZ, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False, default=datetime.utcnow)

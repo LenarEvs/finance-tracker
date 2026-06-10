@@ -216,3 +216,58 @@
 ```
 
 **Результат:** Реализованы все сервисы (CategoryService, TransactionService, BudgetService, ExchangeRateService, DashboardService, ImportExportService, RecurringRuleService), вспомогательный audit-утилит, шедулер APScheduler, seed-скрипт (200+ транзакций, 12 категорий, 2 пользователя, бюджеты, recurring-правила). Обновлены все роутеры, добавлены 13+ integration-тестов, CI pipeline (.github/workflows/ci.yml).
+
+---
+
+## P-010 · 2026-06-10 · Исправление запуска через Docker
+
+**Назначение:** Починить запуск приложения через Docker Compose. Postgres падал с ошибкой об отсутствии пароля суперпользователя.
+
+**Полный текст промпта:**
+```
+Проверь и сделай чтобы приложение запускалось через docker 
+
+я попробывал и сейчас у меня ошибка
+postgres-1  | Error: Database is uninitialized and superuser password is not specified.
+...
+```
+
+**Результат:** Создан файл `.env` на основе `.env.example` (с `DB_PASSWORD=changeme`). `.env` добавлен в `.gitignore` для защиты секретов.
+
+---
+
+## P-011 · 2026-06-10 · Исправление ошибок при запуске и проверка кейсов
+
+**Назначение:** Исправить три ошибки, мешающие запуску всех сервисов через Docker Compose, и проверить основные пользовательские сценарии.
+
+**Полный текст промпта:**
+```
+Задача исправь ошибки при запуске и работе приложения и проверь все основные кейсы
+
+scheduler-1  | pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+scheduler-1  | secret_key
+scheduler-1  |   Field required [type=missing, ...]
+
+backend-1    | TypeError: unsupported operand type(s) for |: 'NoneType' and 'NoneType'
+backend-1    | Unable to evaluate type annotation 'date | None'.
+
+backend-1    | ValueError: password cannot be longer than 72 bytes
+```
+
+**Результат:** Исправлено три ошибки: (1) добавлен `SECRET_KEY` в environment scheduler-сервиса в `docker-compose.yml`; (2) в `schemas/transaction.py` и `schemas/exchange_rate.py` переименован импорт `date` → `Date` (поле `date: date | None` перекрывало тип `date` в pydantic namespace); (3) зафиксирован `bcrypt==3.2.2` в `requirements.txt` (passlib 1.7.4 несовместима с bcrypt>=4). Все основные кейсы проверены: регистрация, логин, refresh token, CRUD категорий, транзакций, бюджетов, recurring rules, dashboard, frontend 200 OK.
+
+---
+
+## P-012 · 2026-06-10 · Исправление ошибки ValidationError в dashboard
+
+**Назначение:** Исправить 500-ошибки на эндпоинтах `/dashboard/expenses-by-category` и `/dashboard/top-categories`.
+
+**Полный текст промпта:**
+```
+Сейчас у нас нас есть Ошибки при запуске проекта давай исправим их
+backend-1    | pydantic_core._pydantic_core.ValidationError: 1 validation error for ExpenseByCategory
+backend-1    | category_id
+backend-1    |   Input should be a valid string [type=string_type, input_value=UUID(...), input_type=UUID]
+```
+
+**Результат:** В `schemas/dashboard.py` тип поля `category_id` в `ExpenseByCategory` и `TopCategory` изменён с `str` на `uuid.UUID` — SQLAlchemy возвращал объект UUID, а Pydantic ожидал строку.
