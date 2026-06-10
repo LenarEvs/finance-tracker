@@ -1,12 +1,130 @@
 import { useState } from "react";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
+import { importExportApi } from "../api/importExport";
+import { useCategories } from "../hooks/useCategories";
 
-const COLUMN_FIELDS = ["Дата", "Тип", "Сумма", "Валюта", "Категория", "Описание"];
+const REQUIRED_FIELDS: { key: string; label: string; required: boolean }[] = [
+  { key: "date", label: "Дата", required: true },
+  { key: "type", label: "Тип (income/expense)", required: true },
+  { key: "amount", label: "Сумма", required: true },
+  { key: "currency", label: "Валюта", required: true },
+  { key: "category_id", label: "ID категории", required: true },
+  { key: "exchange_rate", label: "Курс (необяз.)", required: false },
+  { key: "description", label: "Описание (необяз.)", required: false },
+];
+
+function parseCSVHeaders(text: string): string[] {
+  const firstLine = text.split("\n")[0];
+  return firstLine.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+}
+
+function remapCSV(originalText: string, headers: string[], mapping: Record<string, string>): string {
+  const lines = originalText.split("\n").filter((l) => l.trim());
+  const dataRows = lines.slice(1);
+
+  const fieldKeys = REQUIRED_FIELDS.map((f) => f.key);
+  const newHeader = fieldKeys.join(",");
+
+  const newRows = dataRows.map((line) => {
+    const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    return fieldKeys.map((field) => {
+      const csvCol = mapping[field];
+      if (!csvCol) return "";
+      const idx = headers.indexOf(csvCol);
+      return idx >= 0 ? cols[idx] ?? "" : "";
+    }).join(",");
+  });
+
+  return [newHeader, ...newRows].join("\n");
+}
 
 export function ImportExport() {
+  // Export state
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exportType, setExportType] = useState("");
+  const [exportCategory, setExportCategory] = useState("");
+
+  // Import state
   const [file, setFile] = useState<File | null>(null);
+  const [fileText, setFileText] = useState("");
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
   const [dryRun, setDryRun] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number; errors: { row: number; error: string }[] } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const { data: categories = [] } = useCategories();
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    setFile(f);
+    setImportResult(null);
+    setImportError(null);
+    if (!f) { setCsvHeaders([]); setMapping({}); return; }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setFileText(text);
+      const headers = parseCSVHeaders(text);
+      setCsvHeaders(headers);
+      const autoMapping: Record<string, string> = {};
+      REQUIRED_FIELDS.forEach(({ key }) => {
+        const match = headers.find((h) => h.toLowerCase() === key.toLowerCase());
+        if (match) autoMapping[key] = match;
+      });
+      setMapping(autoMapping);
+    };
+    reader.readAsText(f);
+  }
+
+  async function handleExport() {
+    const params: Record<string, string> = {};
+    if (exportFrom) params.from = exportFrom;
+    if (exportTo) params.to = exportTo;
+    if (exportType) params.type = exportType;
+    if (exportCategory) params.category_id = exportCategory;
+
+    try {
+      const response = await importExportApi.exportCsv(params as any);
+      const url = URL.createObjectURL(response.data as Blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "transactions.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Ошибка при экспорте");
+    }
+  }
+
+  async function handleImport() {
+    if (!file) return;
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      let csvContent: string;
+      const hasMapping = Object.values(mapping).some(Boolean);
+      if (hasMapping) {
+        csvContent = remapCSV(fileText, csvHeaders, mapping);
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const remappedFile = new File([blob], "import.csv", { type: "text/csv" });
+        const res = await importExportApi.importCsv(remappedFile, dryRun);
+        setImportResult(res.data);
+      } else {
+        const res = await importExportApi.importCsv(file, dryRun);
+        setImportResult(res.data);
+      }
+    } catch {
+      setImportError("Ошибка при импорте. Проверьте формат файла.");
+    } finally {
+      setImporting(false);
+    }
+  }
 
   return (
     <PageShell title="Импорт / Экспорт">
@@ -21,26 +139,24 @@ export function ImportExport() {
           <p style={{ margin: "4px 0 20px", fontSize: 13, color: "#6b7280" }}>Выгрузка отфильтрованных транзакций в CSV</p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Field label="От"><input type="date" style={inputStyle} /></Field>
-            <Field label="До"><input type="date" style={inputStyle} /></Field>
+            <Field label="От"><input type="date" style={inputStyle} value={exportFrom} onChange={(e) => setExportFrom(e.target.value)} /></Field>
+            <Field label="До"><input type="date" style={inputStyle} value={exportTo} onChange={(e) => setExportTo(e.target.value)} /></Field>
             <Field label="Тип">
-              <select style={inputStyle}>
+              <select style={inputStyle} value={exportType} onChange={(e) => setExportType(e.target.value)}>
                 <option value="">Все</option>
                 <option value="income">Доходы</option>
                 <option value="expense">Расходы</option>
               </select>
             </Field>
             <Field label="Категория">
-              <select style={inputStyle}>
+              <select style={inputStyle} value={exportCategory} onChange={(e) => setExportCategory(e.target.value)}>
                 <option value="">Все категории</option>
-                <option>Еда</option>
-                <option>Транспорт</option>
-                <option>ЖКХ</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
               </select>
             </Field>
           </div>
 
-          <Button style={{ marginTop: 20, width: "100%", justifyContent: "center" }}>
+          <Button style={{ marginTop: 20, width: "100%", justifyContent: "center" }} onClick={handleExport}>
             ⬇️ Скачать CSV
           </Button>
         </div>
@@ -56,40 +172,69 @@ export function ImportExport() {
           <label style={{ display: "block" }}>
             <div
               style={{ border: "2px dashed #d1d5db", borderRadius: 10, padding: "28px 20px", textAlign: "center", cursor: "pointer", background: "#f9fafb", marginBottom: 16 }}
-              onDragOver={(e) => e.preventDefault()}
             >
               <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
               <div style={{ fontSize: 14, color: "#6b7280" }}>Перетащите CSV или нажмите для выбора</div>
               {file && <div style={{ marginTop: 8, fontSize: 13, color: "#4f46e5", fontWeight: 500 }}>✅ {file.name}</div>}
             </div>
-            <input type="file" accept=".csv" hidden onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <input type="file" accept=".csv" hidden onChange={handleFileChange} />
           </label>
 
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Маппинг колонок</div>
-            {COLUMN_FIELDS.map((label) => (
-              <div key={label} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: "#6b7280", width: 80, flexShrink: 0 }}>{label}</span>
-                <select style={{ ...inputStyle, flex: 1 }}>
-                  <option value="">— не выбрано —</option>
-                  <option>Колонка A</option>
-                  <option>Колонка B</option>
-                  <option>Колонка C</option>
-                  <option>Колонка D</option>
-                  <option>Колонка E</option>
-                </select>
-              </div>
-            ))}
-          </div>
+          {csvHeaders.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Маппинг колонок CSV → поля</div>
+              {REQUIRED_FIELDS.map(({ key, label, required }) => (
+                <div key={key} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: required ? "#374151" : "#6b7280", width: 160, flexShrink: 0 }}>
+                    {label}{required && <span style={{ color: "#dc2626" }}> *</span>}
+                  </span>
+                  <select
+                    style={{ ...inputStyle, flex: 1 }}
+                    value={mapping[key] ?? ""}
+                    onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
+                  >
+                    <option value="">— не выбрано —</option>
+                    {csvHeaders.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {csvHeaders.length === 0 && file && (
+            <div style={{ marginBottom: 16, fontSize: 13, color: "#6b7280" }}>
+              Ожидаемые колонки: id, date, type, amount, currency, exchange_rate, category_id, description
+            </div>
+          )}
 
           <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, cursor: "pointer", fontSize: 13, color: "#374151" }}>
             <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
             Тестовый режим (dry-run) — просмотр без сохранения
           </label>
 
-          <Button style={{ width: "100%", justifyContent: "center" }} disabled={!file}>
-            ⬆️ Загрузить
+          <Button style={{ width: "100%", justifyContent: "center" }} disabled={!file || importing} onClick={handleImport}>
+            {importing ? "Загрузка…" : "⬆️ Загрузить"}
           </Button>
+
+          {importError && <p style={{ color: "#dc2626", fontSize: 13, marginTop: 10 }}>{importError}</p>}
+
+          {importResult && (
+            <div style={{ marginTop: 16, padding: 14, background: "#f9fafb", borderRadius: 8, fontSize: 13 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: "#111827" }}>
+                {dryRun ? "Результат тестового прогона:" : "Результат импорта:"}
+              </div>
+              <div style={{ color: "#16a34a" }}>✅ Создано/будет создано: {importResult.created}</div>
+              <div style={{ color: "#f97316" }}>⚠️ Пропущено: {importResult.skipped}</div>
+              {importResult.errors.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ color: "#dc2626", fontWeight: 500, marginBottom: 4 }}>Ошибки:</div>
+                  {importResult.errors.map((err, i) => (
+                    <div key={i} style={{ color: "#dc2626", fontSize: 12 }}>Строка {err.row}: {err.error}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </PageShell>

@@ -2,15 +2,8 @@ import { useState } from "react";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
+import { useAuditLog } from "../hooks/useAuditLog";
 import type { AuditLog as AuditLogEntry } from "../types";
-
-const mockLogs: AuditLogEntry[] = [
-  { id: 1, user_id: "u1", entity_type: "transaction", entity_id: "aaaa-1111", action: "CREATE", before_data: null, after_data: { amount: "1250", type: "expense", category: "Еда" }, ip_address: "127.0.0.1", occurred_at: "2026-06-08T14:22:00Z" },
-  { id: 2, user_id: "u1", entity_type: "transaction", entity_id: "aaaa-1111", action: "UPDATE", before_data: { amount: "1250" }, after_data: { amount: "1500" }, ip_address: "127.0.0.1", occurred_at: "2026-06-08T15:10:00Z" },
-  { id: 3, user_id: "u1", entity_type: "budget", entity_id: "bbbb-2222", action: "CREATE", before_data: null, after_data: { amount: "30000", category_id: "1" }, ip_address: "127.0.0.1", occurred_at: "2026-06-07T09:00:00Z" },
-  { id: 4, user_id: "u1", entity_type: "transaction", entity_id: "cccc-3333", action: "DELETE", before_data: { amount: "500", type: "expense" }, after_data: null, ip_address: "127.0.0.1", occurred_at: "2026-06-06T11:30:00Z" },
-  { id: 5, user_id: "u1", entity_type: "category", entity_id: "dddd-4444", action: "UPDATE", before_data: { name: "Еда" }, after_data: { name: "Продукты" }, ip_address: "192.168.1.1", occurred_at: "2026-06-05T18:45:00Z" },
-];
 
 const ACTION_STYLE: Record<string, { bg: string; color: string }> = {
   CREATE: { bg: "#dcfce7", color: "#16a34a" },
@@ -25,15 +18,36 @@ const ENTITY_LABELS: Record<string, string> = {
   recurring_rule: "Правило",
 };
 
+const PAGE_SIZE = 50;
+
 export function AuditLog() {
+  const [entityType, setEntityType] = useState("");
+  const [action, setAction] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<AuditLogEntry | null>(null);
+
+  const filters = {
+    entity_type: entityType || undefined,
+    action: action || undefined,
+    from: fromDate || undefined,
+    to: toDate || undefined,
+    page,
+    limit: PAGE_SIZE,
+  };
+
+  const { data: logs = [], isLoading } = useAuditLog(filters);
+
+  function resetFilters() {
+    setEntityType(""); setAction(""); setFromDate(""); setToDate(""); setPage(1);
+  }
 
   return (
     <PageShell title="Журнал изменений">
-      {/* Filters */}
       <div style={{ background: "#fff", borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
         <Field label="Тип объекта">
-          <select style={filterInput}>
+          <select style={filterInput} value={entityType} onChange={(e) => { setEntityType(e.target.value); setPage(1); }}>
             <option value="">Все</option>
             <option value="transaction">Транзакция</option>
             <option value="budget">Бюджет</option>
@@ -41,19 +55,18 @@ export function AuditLog() {
           </select>
         </Field>
         <Field label="Действие">
-          <select style={filterInput}>
+          <select style={filterInput} value={action} onChange={(e) => { setAction(e.target.value); setPage(1); }}>
             <option value="">Все</option>
             <option value="CREATE">Создание</option>
             <option value="UPDATE">Изменение</option>
             <option value="DELETE">Удаление</option>
           </select>
         </Field>
-        <Field label="От"><input type="date" style={filterInput} /></Field>
-        <Field label="До"><input type="date" style={filterInput} /></Field>
-        <Button variant="secondary">Сбросить</Button>
+        <Field label="От"><input type="date" style={filterInput} value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} /></Field>
+        <Field label="До"><input type="date" style={filterInput} value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} /></Field>
+        <Button variant="secondary" onClick={resetFilters}>Сбросить</Button>
       </div>
 
-      {/* Table */}
       <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", overflow: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
           <thead style={{ background: "#f9fafb" }}>
@@ -64,7 +77,9 @@ export function AuditLog() {
             </tr>
           </thead>
           <tbody>
-            {mockLogs.map((log) => {
+            {isLoading && <tr><td colSpan={7} style={{ textAlign: "center", padding: 32, color: "#9ca3af" }}>Загрузка…</td></tr>}
+            {!isLoading && logs.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: 32, color: "#9ca3af" }}>Записей не найдено</td></tr>}
+            {logs.map((log) => {
               const as = ACTION_STYLE[log.action];
               return (
                 <tr key={log.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
@@ -81,7 +96,7 @@ export function AuditLog() {
                       {log.action}
                     </span>
                   </td>
-                  <td style={{ ...td, fontSize: 12, color: "#9ca3af" }}>{log.ip_address}</td>
+                  <td style={{ ...td, fontSize: 12, color: "#9ca3af" }}>{log.ip_address ?? "—"}</td>
                   <td style={{ ...td, textAlign: "right" }}>
                     <Button variant="secondary" size="sm" onClick={() => setSelected(log)}>Детали</Button>
                   </td>
@@ -92,14 +107,12 @@ export function AuditLog() {
         </table>
       </div>
 
-      {/* Pagination */}
       <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, alignItems: "center" }}>
-        <Button variant="secondary" size="sm">← Пред</Button>
-        <span style={{ padding: "5px 12px", fontSize: 13, color: "#374151" }}>Страница 1 из 1</span>
-        <Button variant="secondary" size="sm">След →</Button>
+        <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>← Пред</Button>
+        <span style={{ padding: "5px 12px", fontSize: 13, color: "#374151" }}>Страница {page}</span>
+        <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={logs.length < PAGE_SIZE}>След →</Button>
       </div>
 
-      {/* Detail modal */}
       <Modal open={!!selected} onClose={() => setSelected(null)} title="Детали изменения" width={560}>
         {selected && (
           <div>
