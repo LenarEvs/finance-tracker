@@ -3,6 +3,8 @@ import { Plus, Pencil, Archive } from "lucide-react";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
+import { CategoryIcon, defaultIconForType } from "../components/ui/CategoryIcon";
+import { IconPicker } from "../components/ui/IconPicker";
 import { useCategories, useCreateCategory, useUpdateCategory, useArchiveCategory } from "../hooks/useCategories";
 import type { Category, TransactionType } from "../types";
 import { cn } from "../lib/cn";
@@ -56,10 +58,10 @@ export function Categories() {
           <div key={cat.id} className="card p-4 group">
             <div className="flex items-start gap-3 mb-3">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                style={{ background: cat.color + "22" }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: cat.color + "22", color: cat.color }}
               >
-                {cat.icon}
+                <CategoryIcon name={cat.icon} size={20} />
               </div>
               <div className="min-w-0">
                 <div className="font-semibold text-sm text-slate-800 truncate">{cat.name}</div>
@@ -99,7 +101,7 @@ export function Categories() {
 function CategoryForm({ defaultValues, onClose }: { defaultValues: Category | null; onClose: () => void }) {
   const [name, setName] = useState(defaultValues?.name ?? "");
   const [type, setType] = useState<TransactionType>(defaultValues?.type ?? "expense");
-  const [icon, setIcon] = useState(defaultValues?.icon ?? "🏷️");
+  const [icon, setIcon] = useState(defaultValues?.icon ?? defaultIconForType(defaultValues?.type ?? "expense"));
   const [color, setColor] = useState(defaultValues?.color ?? "#4f46e5");
   const [error, setError] = useState<string | null>(null);
 
@@ -137,15 +139,13 @@ function CategoryForm({ defaultValues, onClose }: { defaultValues: Category | nu
           </select>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label">Иконка</label>
-          <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="🏷️" maxLength={4} className="input text-center text-xl" />
-        </div>
-        <div>
-          <label className="label">Цвет</label>
-          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="input h-10 p-1 cursor-pointer" />
-        </div>
+      <div>
+        <label className="label">Иконка</label>
+        <IconPicker value={icon} onChange={setIcon} type={type} />
+      </div>
+      <div>
+        <label className="label">Цвет</label>
+        <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="input h-10 p-1 cursor-pointer" />
       </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
       <div className="flex justify-end gap-2 pt-1">

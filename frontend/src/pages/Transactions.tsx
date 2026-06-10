@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, RotateCcw, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { CategoryIcon } from "../components/ui/CategoryIcon";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -49,9 +50,8 @@ export function Transactions() {
     setAmountMin(""); setAmountMax(""); setPage(1);
   }
 
-  function getCategoryName(id: string) {
-    const c = categories.find((c) => c.id === id);
-    return c ? `${c.icon} ${c.name}` : id.slice(0, 8);
+  function getCategory(id: string) {
+    return categories.find((c) => c.id === id) ?? null;
   }
 
   return (
@@ -74,7 +74,7 @@ export function Transactions() {
         <Field label="Категория">
           <select className="input w-auto" value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}>
             <option value="">Все</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
         <Field label="Сумма от">
@@ -123,7 +123,9 @@ export function Transactions() {
                       {t.type === "income" ? "Доход" : "Расход"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{getCategoryName(t.category_id)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">
+                    {(() => { const c = getCategory(t.category_id); return c ? <span className="flex items-center gap-1.5"><CategoryIcon name={c.icon} size={14} />{c.name}</span> : t.category_id.slice(0, 8); })()}
+                  </td>
                   <td className={cn("px-4 py-3 text-sm font-semibold", t.type === "income" ? "text-emerald-600" : "text-red-500")}>
                     {t.type === "income" ? "+" : "−"}{Number(t.amount).toLocaleString("ru-RU")}
                   </td>

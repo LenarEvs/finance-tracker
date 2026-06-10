@@ -27,18 +27,18 @@ USERS = [
 ]
 
 CATEGORIES = [
-    {"name": "Зарплата", "icon": "💼", "color": "#22c55e", "type": "income"},
-    {"name": "Фриланс", "icon": "💻", "color": "#10b981", "type": "income"},
-    {"name": "Инвестиции", "icon": "📈", "color": "#06b6d4", "type": "income"},
-    {"name": "Продукты", "icon": "🛒", "color": "#f59e0b", "type": "expense"},
-    {"name": "Транспорт", "icon": "🚗", "color": "#6366f1", "type": "expense"},
-    {"name": "Кафе и рестораны", "icon": "☕", "color": "#ec4899", "type": "expense"},
-    {"name": "ЖКХ", "icon": "🏠", "color": "#8b5cf6", "type": "expense"},
-    {"name": "Связь", "icon": "📱", "color": "#14b8a6", "type": "expense"},
-    {"name": "Развлечения", "icon": "🎵", "color": "#f43f5e", "type": "expense"},
-    {"name": "Одежда", "icon": "👗", "color": "#84cc16", "type": "expense"},
-    {"name": "Здоровье", "icon": "❤️", "color": "#ef4444", "type": "expense"},
-    {"name": "Образование", "icon": "📚", "color": "#3b82f6", "type": "expense"},
+    {"name": "Зарплата",         "icon": "money-bag",        "color": "#22c55e", "type": "income"},
+    {"name": "Фриланс",          "icon": "laptop",           "color": "#10b981", "type": "income"},
+    {"name": "Инвестиции",       "icon": "chart-increasing", "color": "#06b6d4", "type": "income"},
+    {"name": "Продукты",         "icon": "shopping-cart",    "color": "#f59e0b", "type": "expense"},
+    {"name": "Транспорт",        "icon": "automobile",       "color": "#6366f1", "type": "expense"},
+    {"name": "Кафе и рестораны", "icon": "hot-beverage",     "color": "#ec4899", "type": "expense"},
+    {"name": "ЖКХ",              "icon": "house",            "color": "#8b5cf6", "type": "expense"},
+    {"name": "Связь",            "icon": "mobile-phone",     "color": "#14b8a6", "type": "expense"},
+    {"name": "Развлечения",      "icon": "musical-notes",    "color": "#f43f5e", "type": "expense"},
+    {"name": "Одежда",           "icon": "t-shirt",          "color": "#84cc16", "type": "expense"},
+    {"name": "Здоровье",         "icon": "medical-symbol",   "color": "#ef4444", "type": "expense"},
+    {"name": "Образование",      "icon": "graduation-cap",   "color": "#3b82f6", "type": "expense"},
 ]
 
 

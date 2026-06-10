@@ -10,12 +10,17 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@iconify-json/noto": "^1.2.7",
+    "@iconify/react": "^6.0.2",
+    "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-query": "^5.59.0",
     "autoprefixer": "^10.5.0",
     "axios": "^1.7.7",
+    "chart.js": "^4.5.1",
     "lucide-react": "^1.17.0",
     "postcss": "^8.5.15",
     "react": "^18.3.1",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.27.0",
     "recharts": "^2.13.0",

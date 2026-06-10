@@ -1,12 +1,8 @@
-import {
-  ResponsiveContainer,
-  PieChart as RechartsPie,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Doughnut } from "react-chartjs-2";
 import type { ExpenseByCategory } from "../../types";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const COLORS = [
   "#6366f1", "#f59e0b", "#10b981", "#ef4444", "#3b82f6",
@@ -18,29 +14,40 @@ interface Props {
 }
 
 export function PieChart({ data }: Props) {
+  const chartData = {
+    labels: data.map((d) => d.category_name),
+    datasets: [
+      {
+        data: data.map((d) => d.amount),
+        backgroundColor: data.map((_, i) => COLORS[i % COLORS.length]),
+        borderColor: "#ffffff",
+        borderWidth: 2,
+        hoverOffset: 6,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "55%",
+    plugins: {
+      legend: {
+        position: "bottom" as const,
+        labels: { boxWidth: 10, font: { size: 12 }, color: "#64748b", padding: 12 },
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { label: string; parsed: number }) =>
+            ` ${ctx.label}: ${ctx.parsed.toLocaleString("ru-RU")} ₽`,
+        },
+      },
+    },
+  };
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <RechartsPie margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-        <Pie
-          data={data}
-          dataKey="amount"
-          nameKey="category_name"
-          cx="50%"
-          cy="50%"
-          outerRadius={90}
-          innerRadius={50}
-          paddingAngle={2}
-        >
-          {data.map((_, i) => (
-            <Cell key={i} fill={COLORS[i % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13, boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}
-          formatter={(v: number) => v.toLocaleString("ru-RU") + " ₽"}
-        />
-        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-      </RechartsPie>
-    </ResponsiveContainer>
+    <div style={{ height: 260 }}>
+      <Doughnut data={chartData} options={options} />
+    </div>
   );
 }
