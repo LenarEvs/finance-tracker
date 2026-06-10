@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Plus, Pencil, Trash2, Pause, Play } from "lucide-react";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useRecurringRules, useCreateRecurringRule, useUpdateRecurringRule, useDeleteRecurringRule } from "../hooks/useRecurringRules";
 import { useCategories } from "../hooks/useCategories";
 import type { RecurringRule, TransactionType } from "../types";
+import { cn } from "../lib/cn";
 
 const CURRENCIES = ["RUB", "USD", "EUR", "CNY", "GBP"];
 
@@ -21,66 +23,77 @@ export function RecurringRules() {
 
   return (
     <PageShell title="Повторяющиеся транзакции">
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <Button onClick={openCreate}>+ Правило</Button>
+      <div className="flex justify-end mb-4">
+        <Button size="sm" onClick={openCreate}>
+          <Plus size={14} /> Правило
+        </Button>
       </div>
 
-      {isLoading && <div style={{ color: "#9ca3af", textAlign: "center", padding: 32 }}>Загрузка…</div>}
+      {isLoading && <div className="text-slate-400 text-center py-10">Загрузка…</div>}
 
-      <div style={{ background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.08)", overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
-          <thead style={{ background: "#f9fafb" }}>
-            <tr>
-              {["Описание", "Тип", "Сумма / Валюта", "День", "Следующий запуск", "Статус", ""].map((h) => (
-                <th key={h} style={{ textAlign: "left", padding: "10px 16px", fontSize: 12, color: "#6b7280", fontWeight: 500, borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!isLoading && rules.length === 0 && (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: 32, color: "#9ca3af" }}>Правила не найдены</td></tr>
-            )}
-            {rules.map((rule) => {
-              const isIncome = rule.type === "income";
-              return (
-                <tr key={rule.id} style={{ borderBottom: "1px solid #f3f4f6", opacity: rule.is_active ? 1 : 0.55 }}>
-                  <td style={td}>{rule.description || "—"}</td>
-                  <td style={td}>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: isIncome ? "#dcfce7" : "#fee2e2", color: isIncome ? "#16a34a" : "#dc2626" }}>
-                      {isIncome ? "Доход" : "Расход"}
-                    </span>
-                  </td>
-                  <td style={{ ...td, fontWeight: 600, color: isIncome ? "#16a34a" : "#dc2626" }}>
-                    {Number(rule.amount).toLocaleString("ru-RU")} {rule.currency}
-                  </td>
-                  <td style={{ ...td, color: "#6b7280" }}>{rule.day_of_month}-е число</td>
-                  <td style={{ ...td, color: "#6b7280" }}>{rule.next_run_date}</td>
-                  <td style={td}>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: rule.is_active ? "#dcfce7" : "#f3f4f6", color: rule.is_active ? "#16a34a" : "#6b7280" }}>
-                      {rule.is_active ? "Активно" : "Пауза"}
-                    </span>
-                  </td>
-                  <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      style={{ marginRight: 6 }}
-                      onClick={() => toggleMutation.mutate({ id: rule.id, data: { is_active: !rule.is_active } })}
-                    >
-                      {rule.is_active ? "⏸" : "▶"}
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => openEdit(rule)} style={{ marginRight: 6 }}>✏️</Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => { if (confirm("Удалить правило?")) deleteMutation.mutate(rule.id); }}
-                    >🗑</Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse min-w-[640px]">
+            <thead className="bg-slate-50">
+              <tr>
+                {["Описание", "Тип", "Сумма / Валюта", "День", "Следующий запуск", "Статус", ""].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-slate-500 border-b border-slate-100 whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {!isLoading && rules.length === 0 && (
+                <tr><td colSpan={7} className="text-center py-10 text-slate-400 text-sm">Правила не найдены</td></tr>
+              )}
+              {rules.map((rule) => {
+                const isIncome = rule.type === "income";
+                return (
+                  <tr key={rule.id} className={cn("border-b border-slate-50 hover:bg-slate-50/50 transition-colors", !rule.is_active && "opacity-55")}>
+                    <td className="px-4 py-3 text-sm text-slate-700">{rule.description || "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn("badge", isIncome ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
+                        {isIncome ? "Доход" : "Расход"}
+                      </span>
+                    </td>
+                    <td className={cn("px-4 py-3 text-sm font-semibold", isIncome ? "text-emerald-600" : "text-red-500")}>
+                      {Number(rule.amount).toLocaleString("ru-RU")} {rule.currency}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{rule.day_of_month}-е число</td>
+                    <td className="px-4 py-3 text-sm text-slate-500">{rule.next_run_date}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn("badge", rule.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                        {rule.is_active ? "Активно" : "Пауза"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mr-1"
+                        onClick={() => toggleMutation.mutate({ id: rule.id, data: { is_active: !rule.is_active } })}
+                      >
+                        {rule.is_active ? <Pause size={13} /> : <Play size={13} />}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="mr-1" onClick={() => openEdit(rule)}>
+                        <Pencil size={13} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => { if (confirm("Удалить правило?")) deleteMutation.mutate(rule.id); }}
+                      >
+                        <Trash2 size={13} />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? "Редактировать правило" : "Новое правило"}>
@@ -124,57 +137,52 @@ function RuleForm({ initialValues, onClose }: { initialValues: RecurringRule | n
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-4">
       {!isEditing && (
-        <div style={fieldS}>
-          <label style={labelS}>Тип</label>
-          <select style={inputS} value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
+        <div>
+          <label className="label">Тип</label>
+          <select className="input" value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
             <option value="expense">Расход</option>
             <option value="income">Доход</option>
           </select>
         </div>
       )}
       {!isEditing && (
-        <div style={fieldS}>
-          <label style={labelS}>Категория</label>
-          <select style={inputS} value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+        <div>
+          <label className="label">Категория</label>
+          <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
             <option value="">Выберите категорию</option>
             {filteredCategories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
           </select>
         </div>
       )}
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <div style={{ flex: 2, display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={labelS}>Сумма</label>
-          <input type="number" min="0" step="0.01" placeholder="0.00" style={inputS} value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-2">
+          <label className="label">Сумма</label>
+          <input type="number" min="0" step="0.01" placeholder="0.00" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
         </div>
         {!isEditing && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={labelS}>Валюта</label>
-            <select style={inputS} value={currency} onChange={(e) => setCurrency(e.target.value)}>
+          <div>
+            <label className="label">Валюта</label>
+            <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
               {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </div>
         )}
       </div>
-      <div style={fieldS}>
-        <label style={labelS}>День месяца (1–28)</label>
-        <input type="number" min="1" max="28" placeholder="1" style={inputS} value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)} required />
+      <div>
+        <label className="label">День месяца (1–28)</label>
+        <input type="number" min="1" max="28" placeholder="1" className="input" value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)} required />
       </div>
-      <div style={fieldS}>
-        <label style={labelS}>Описание</label>
-        <input type="text" placeholder="Необязательно" style={inputS} value={description} onChange={(e) => setDescription(e.target.value)} />
+      <div>
+        <label className="label">Описание</label>
+        <input type="text" placeholder="Необязательно" className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
-      {error && <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+      {error && <p className="text-red-500 text-xs">{error}</p>}
+      <div className="flex justify-end gap-2 pt-1">
         <Button variant="secondary" type="button" onClick={onClose}>Отмена</Button>
         <Button type="submit" disabled={isLoading}>{isLoading ? "Сохранение…" : "Сохранить"}</Button>
       </div>
     </form>
   );
 }
-
-const inputS: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 14, outline: "none" };
-const fieldS: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 };
-const labelS: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: "#374151" };
-const td: React.CSSProperties = { padding: "12px 16px", fontSize: 14, color: "#111827" };

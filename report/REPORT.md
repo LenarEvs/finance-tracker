@@ -313,3 +313,23 @@
 Иконки в seed-данных были записаны как Lucide-имена строками (`briefcase`, `laptop`, `trending-up` и т.д.), но библиотека `lucide-react` в проекте не использовалась. Фронтенд рендерил `{cat.icon}` как обычный текст.
 
 **Решение:** заменил строковые имена на эмодзи в `backend/app/seed.py`. Выполнил одноразовый скрипт `fix_icons.py` (docker compose run) для обновления существующих записей в БД по таблице соответствий.
+
+---
+
+### 2026-06-10 — Редизайн UI с Tailwind CSS и lucide-react
+
+**Задача:** Полный редизайн фронтенда в современном стиле.
+
+**Что сделано:**
+- Установлены `tailwindcss@^3`, `postcss`, `autoprefixer`, `lucide-react`
+- Создан `src/index.css` с директивами `@tailwind` и переиспользуемыми слоями `.input`, `.card`, `.badge`
+- Добавлена утилита `src/lib/cn.ts` для объединения классов
+- Переработаны все компоненты: Sidebar (Lucide-иконки меню), Topbar, PageShell, Button, Modal
+- Все 7 страниц (Dashboard, Transactions, Categories, Budgets, RecurringRules, ImportExport, AuditLog) полностью переведены с inline-стилей на Tailwind
+- Login/Register обновлены до тёмного gradient-дизайна (`from-slate-900 via-indigo-950 to-slate-900`)
+- Графики: заменены фиксированные `width/height` на `ResponsiveContainer` — больше не обрезаются; добавлены `CartesianGrid`, `Legend`, цвета; PieChart обновлён до donut-стиля
+
+**Ключевые решения:**
+- Tailwind v3 (не v4) — стабильная версия, JIT-режим из коробки
+- `lucide-react` для SVG-иконок интерфейса; эмодзи в категориях остались — это данные пользователя
+- `ResponsiveContainer` в Recharts — ширина чарта адаптируется к контейнеру без магических констант

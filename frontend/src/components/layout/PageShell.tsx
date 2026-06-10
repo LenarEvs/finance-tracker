@@ -9,15 +9,13 @@ interface Props {
 
 export function PageShell({ children, title }: Props) {
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="flex min-h-screen">
       <Sidebar />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
-        <main style={{ flex: 1, padding: 24, overflowY: "auto" }}>
+        <main className="flex-1 p-6 overflow-y-auto">
           {title && (
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 20px" }}>
-              {title}
-            </h1>
+            <h1 className="text-xl font-bold text-slate-900 mb-6">{title}</h1>
           )}
           {children}
         </main>

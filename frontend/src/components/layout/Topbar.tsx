@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
+import { LogOut, User } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import { Button } from "../ui/Button";
 
 export function Topbar() {
   const { user, logout } = useAuthStore();
@@ -11,18 +13,19 @@ export function Topbar() {
   }
 
   return (
-    <header style={{ height: 52, background: "#fff", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, justifyContent: "flex-end", flexShrink: 0 }}>
+    <header className="h-14 bg-white border-b border-slate-100 flex items-center px-6 gap-3 justify-end flex-shrink-0">
       {user && (
-        <span style={{ fontSize: 13, color: "#6b7280" }}>
-          {user.full_name || user.email}
-        </span>
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
+            <User size={14} className="text-indigo-600" />
+          </div>
+          <span className="hidden sm:block">{user.full_name || user.email}</span>
+        </div>
       )}
-      <button
-        onClick={handleLogout}
-        style={{ padding: "5px 14px", border: "1px solid #e5e7eb", borderRadius: 8, background: "#fff", cursor: "pointer", fontSize: 13, color: "#374151" }}
-      >
+      <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5">
+        <LogOut size={14} />
         Выйти
-      </button>
+      </Button>
     </header>
   );
 }

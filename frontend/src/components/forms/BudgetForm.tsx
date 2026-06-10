@@ -43,17 +43,17 @@ export function BudgetForm({ budgetId, defaultCategoryId, defaultYearMonth, defa
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-4">
       {!isEditing && (
-        <div style={fieldS}>
-          <label style={labelS}>Месяц</label>
-          <input type="month" style={inputS} value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} required />
+        <div>
+          <label className="label">Месяц</label>
+          <input type="month" className="input" value={yearMonth} onChange={(e) => setYearMonth(e.target.value)} required />
         </div>
       )}
       {!isEditing && (
-        <div style={fieldS}>
-          <label style={labelS}>Категория (расходы)</label>
-          <select style={inputS} value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+        <div>
+          <label className="label">Категория (расходы)</label>
+          <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
             <option value="">Выберите категорию</option>
             {categories.filter((c) => !c.is_archived).map((c) => (
               <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
@@ -61,19 +61,15 @@ export function BudgetForm({ budgetId, defaultCategoryId, defaultYearMonth, defa
           </select>
         </div>
       )}
-      <div style={fieldS}>
-        <label style={labelS}>Лимит (в базовой валюте)</label>
-        <input type="number" min="0.01" step="0.01" placeholder="0.00" style={inputS} value={amount} onChange={(e) => setAmount(e.target.value)} required />
+      <div>
+        <label className="label">Лимит (в базовой валюте)</label>
+        <input type="number" min="0.01" step="0.01" placeholder="0.00" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
       </div>
-      {error && <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
+      {error && <p className="text-red-500 text-xs">{error}</p>}
+      <div className="flex justify-end gap-2 pt-1">
         <Button variant="secondary" type="button" onClick={onClose}>Отмена</Button>
         <Button type="submit" disabled={isLoading}>{isLoading ? "Сохранение…" : "Сохранить"}</Button>
       </div>
     </form>
   );
 }
-
-const inputS: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 14, outline: "none" };
-const fieldS: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 };
-const labelS: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: "#374151" };

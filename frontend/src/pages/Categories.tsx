@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Plus, Pencil, Archive } from "lucide-react";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useCategories, useCreateCategory, useUpdateCategory, useArchiveCategory } from "../hooks/useCategories";
 import type { Category, TransactionType } from "../types";
+import { cn } from "../lib/cn";
 
 type Filter = "all" | TransactionType;
 
@@ -21,53 +23,70 @@ export function Categories() {
   function openCreate() { setEditItem(null); setModalOpen(true); }
   function openEdit(c: Category) { setEditItem(c); setModalOpen(true); }
 
+  const filterLabels: Record<Filter, string> = { all: "Все", expense: "Расходы", income: "Доходы" };
+
   return (
     <PageShell title="Категории">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 8 }}>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex gap-1.5">
           {(["all", "expense", "income"] as Filter[]).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              style={{ padding: "6px 16px", borderRadius: 999, border: "1px solid #e5e7eb", background: filter === f ? "#4f46e5" : "#fff", color: filter === f ? "#fff" : "#374151", cursor: "pointer", fontSize: 13, fontWeight: 500 }}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                filter === f
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-slate-600 border-slate-200 hover:border-slate-300",
+              )}
             >
-              {f === "all" ? "Все" : f === "expense" ? "Расходы" : "Доходы"}
+              {filterLabels[f]}
             </button>
           ))}
         </div>
-        <Button onClick={openCreate}>+ Категория</Button>
+        <Button size="sm" onClick={openCreate}>
+          <Plus size={14} /> Категория
+        </Button>
       </div>
 
-      {isLoading && <div style={{ color: "#9ca3af", textAlign: "center", padding: 32 }}>Загрузка…</div>}
+      {isLoading && <div className="text-slate-400 text-center py-10">Загрузка…</div>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 14 }}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {active.map((cat) => (
-          <div key={cat.id} style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 42, height: 42, borderRadius: 10, background: cat.color + "22", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+          <div key={cat.id} className="card p-4 group">
+            <div className="flex items-start gap-3 mb-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                style={{ background: cat.color + "22" }}
+              >
                 {cat.icon}
               </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>{cat.name}</div>
-                <div style={{ fontSize: 12, marginTop: 2, color: cat.type === "income" ? "#16a34a" : "#dc2626" }}>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm text-slate-800 truncate">{cat.name}</div>
+                <div className={cn("text-xs mt-0.5 font-medium", cat.type === "income" ? "text-emerald-600" : "text-red-500")}>
                   {cat.type === "income" ? "Доход" : "Расход"}
                 </div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-              <Button variant="secondary" size="sm" onClick={() => openEdit(cat)}>✏️</Button>
+            <div className="flex gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}>
+                <Pencil size={12} />
+              </Button>
               <Button
-                variant="danger"
+                variant="ghost"
                 size="sm"
-                onClick={() => { if (confirm(`Архивировать категорию "${cat.name}"?`)) archiveMutation.mutate(cat.id); }}
-              >🗑</Button>
+                className="text-red-400 hover:text-red-600 hover:bg-red-50"
+                onClick={() => { if (confirm(`Архивировать "${cat.name}"?`)) archiveMutation.mutate(cat.id); }}
+              >
+                <Archive size={12} />
+              </Button>
             </div>
           </div>
         ))}
       </div>
 
       {!isLoading && active.length === 0 && (
-        <div style={{ textAlign: "center", color: "#9ca3af", padding: 40 }}>Категорий не найдено</div>
+        <div className="text-slate-400 text-center py-16">Категорий не найдено</div>
       )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editItem ? "Редактировать категорию" : "Новая категория"}>
@@ -104,39 +123,35 @@ function CategoryForm({ defaultValues, onClose }: { defaultValues: Category | nu
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div style={fieldS}>
-        <label style={labelS}>Название</label>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Название категории" style={inputS} required />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="label">Название</label>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Название категории" className="input" required />
       </div>
       {!defaultValues && (
-        <div style={fieldS}>
-          <label style={labelS}>Тип</label>
-          <select value={type} onChange={(e) => setType(e.target.value as TransactionType)} style={inputS}>
+        <div>
+          <label className="label">Тип</label>
+          <select value={type} onChange={(e) => setType(e.target.value as TransactionType)} className="input">
             <option value="expense">Расход</option>
             <option value="income">Доход</option>
           </select>
         </div>
       )}
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={labelS}>Иконка</label>
-          <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="🏷️" maxLength={4} style={{ ...inputS, fontSize: 22, textAlign: "center" }} />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">Иконка</label>
+          <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="🏷️" maxLength={4} className="input text-center text-xl" />
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={labelS}>Цвет</label>
-          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} style={{ ...inputS, padding: 4, height: 40 }} />
+        <div>
+          <label className="label">Цвет</label>
+          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="input h-10 p-1 cursor-pointer" />
         </div>
       </div>
-      {error && <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{error}</p>}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+      {error && <p className="text-red-500 text-xs">{error}</p>}
+      <div className="flex justify-end gap-2 pt-1">
         <Button variant="secondary" type="button" onClick={onClose}>Отмена</Button>
         <Button type="submit" disabled={isLoading}>{isLoading ? "Сохранение…" : "Сохранить"}</Button>
       </div>
     </form>
   );
 }
-
-const inputS: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 14, outline: "none" };
-const fieldS: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 };
-const labelS: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: "#374151" };

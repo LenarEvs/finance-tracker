@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  }
+  * {
+    @apply box-border;
+  }
+  a {
+    @apply text-inherit no-underline;
+  }
+  input, select, button, textarea {
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none bg-white
+           focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all;
+  }
+  .label {
+    @apply block text-xs font-medium text-slate-600 mb-1;
+  }
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-100;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+}
