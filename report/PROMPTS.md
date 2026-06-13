@@ -484,3 +484,28 @@ Ruff и TypeScript проходили чисто. ESLint выдавал 2 пре
 > Тест: создай транзакции на 100, 500, 2000 руб → фильтр `amount_min=200&amount_max=1000` должен вернуть только 500.
 
 **Результат:** Backend принимает `amount_min`/`amount_max` с валидацией (ge=0, min ≤ max). Фильтрация идёт по колонке `amount_base` (GENERATED COLUMN = amount * exchange_rate). Модель `Transaction` дополнена маппингом `amount_base`. Frontend переведён с клиентской фильтрации на серверную с debounce 400ms через новый хук `useDebounce`. Тест покрывает сценарий с тремя транзакциями.
+
+---
+
+## P-029 · 2026-06-13 · Исправление race condition при старте Docker Compose
+
+**Назначение:** Устранить ошибку запуска: backend и scheduler одновременно запускали `alembic upgrade head`, что приводило к `UniqueViolationError` на таблице `alembic_version`.
+
+**Промпт:**
+> Исправь ошибки
+> backend-1 | asyncpg.exceptions.UniqueViolationError: duplicate key value violates unique constraint "pg_type_typname_nsp_index"
+> DETAIL: Key (typname, typnamespace)=(alembic_version, 2200) already exists.
+
+**Результат:** В `docker-compose.yml` для сервиса `scheduler` добавлен `entrypoint: []` — теперь миграции запускает только `backend` через `entrypoint.sh`. Добавлен healthcheck на backend (`/health`, 10 попыток). Scheduler переведён на `depends_on: backend: service_healthy`, чтобы стартовать только после завершения миграций. В `app/scheduler/__main__.py` добавлен retry-цикл (10 попыток с паузой 10 сек) для стартового запуска job.
+
+---
+
+## P-030 · 2026-06-13 · Исправление UndefinedTableError в scheduler
+
+**Назначение:** После предыдущего фикса scheduler всё равно падал с `relation "recurring_rules" does not exist` — стартовал раньше, чем backend заканчивал миграции.
+
+**Промпт:**
+> Исправь
+> scheduler-1 | asyncpg.exceptions.UndefinedTableError: relation "recurring_rules" does not exist
+
+**Результат:** Добавлен healthcheck на сервис `backend` в `docker-compose.yml`. Scheduler теперь ждёт `condition: service_healthy` вместо простого `depends_on: postgres`. В `__main__.py` добавлен retry-loop на 10 попыток — scheduler не падает при временной недоступности БД.

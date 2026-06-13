@@ -537,3 +537,34 @@ SQLAlchemy + psycopg2 читает PostgreSQL `INET`-колонку как Pytho
 - **Маппинг на бэкенде, не на клиенте** — клиентский `remapCSV` был хрупким: неправильно парсил CSV с запятыми в значениях. Передача параметров в API решает проблему без рисков.
 - **Дефолты = текущие имена** — обратная совместимость: существующие CSV-файлы и тесты работают без изменений.
 - **Валидация до итерации** — `fieldnames` проверяем один раз до цикла, не внутри; при ошибке сразу 422, без частичного импорта.
+
+---
+
+## Этап 12 · 2026-06-13 · Исправление инфраструктурных ошибок Docker Compose
+
+### Проблема 1: Race condition при запуске миграций
+
+**Симптом:** `backend` падал с `UniqueViolationError: duplicate key value violates unique constraint "pg_type_typname_nsp_index"` — Alembic не мог создать таблицу `alembic_version`.
+
+**Причина:** Оба сервиса — `backend` и `scheduler` — использовали один образ с `entrypoint.sh`, который запускает `alembic upgrade head`. При одновременном старте оба пытались создать `alembic_version` параллельно.
+
+**Исправление:** В `docker-compose.yml` для `scheduler` добавлен `entrypoint: []` — сервис запускает `python -m app.scheduler` напрямую, без миграций. Том `pg_data` пересоздан через `docker compose down -v`.
+
+### Проблема 2: Scheduler стартует раньше миграций
+
+**Симптом:** После первого фикса scheduler падал с `UndefinedTableError: relation "recurring_rules" does not exist` — стартовал до завершения миграций backend.
+
+**Причина:** `depends_on: postgres: service_healthy` гарантирует только готовность PostgreSQL, но не завершение `alembic upgrade head`.
+
+**Исправление:**
+- Добавлен `healthcheck` на сервис `backend`: проверяет `GET /health` каждые 10 сек, до 10 попыток, `start_period: 30s`.
+- `scheduler` переведён на `depends_on: backend: condition: service_healthy` — запускается только после того, как backend ответил на healthcheck.
+- В `app/scheduler/__main__.py` добавлен retry-loop на стартовом вызове: 10 попыток с паузой 10 сек — защита от временных сбоев.
+
+### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| `entrypoint: []` для scheduler | Проще и надёжнее, чем условный запуск миграций внутри скрипта |
+| healthcheck на `/health` | Единственный надёжный способ убедиться, что миграции завершены — backend ответил |
+| retry в `__main__.py` | Дополнительная защита без изменения архитектуры — scheduler не рушится из-за единичного сбоя соединения |
