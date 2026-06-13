@@ -3,6 +3,7 @@ import { Upload, Download, FileText, CheckCircle2, AlertCircle } from "lucide-re
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
 import { importExportApi } from "../api/importExport";
+import type { TransactionFilters } from "../api/transactions";
 import { useCategories } from "../hooks/useCategories";
 
 const REQUIRED_FIELDS: { key: string; label: string; required: boolean }[] = [
@@ -83,7 +84,7 @@ export function ImportExport() {
     if (exportType) params.type = exportType;
     if (exportCategory) params.category_id = exportCategory;
     try {
-      const response = await importExportApi.exportCsv(params as any);
+      const response = await importExportApi.exportCsv(params as TransactionFilters);
       const url = URL.createObjectURL(response.data as Blob);
       const a = document.createElement("a");
       a.href = url;

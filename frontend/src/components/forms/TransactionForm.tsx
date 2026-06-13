@@ -38,7 +38,7 @@ export function TransactionForm({ initialValues, onClose }: Props) {
     e.preventDefault();
     setError(null);
     if (!categoryId) { setError("Выберите категорию"); return; }
-    const payload = { type, date, category_id: categoryId, amount, currency, exchange_rate: exchangeRate, description: description || undefined } as any;
+    const payload: Omit<Transaction, "id" | "user_id" | "is_recurring_instance" | "recurring_rule_id" | "created_at" | "updated_at"> = { type, date, category_id: categoryId, amount: String(amount), currency, exchange_rate: String(exchangeRate), description: description || null };
     try {
       if (initialValues) {
         await updateMutation.mutateAsync({ id: initialValues.id, data: payload });
