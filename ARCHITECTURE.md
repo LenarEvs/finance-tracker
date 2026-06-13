@@ -403,13 +403,14 @@ Auth: `Authorization: Bearer <JWT>` on all routes except `/auth/*`
 | Service | Image / Build | Internal Port | Exposed Port | Depends On |
 |---|---|---|---|---|
 | `postgres` | `postgres:16-alpine` | 5432 | 5432 (dev only) | — |
-| `backend` | `./backend` (custom) | 8000 | — | `postgres` |
-| `frontend` | `./frontend` (custom) | 5173 (dev) / 80 (prod) | — | `backend` |
-| `nginx` | `nginx:1.25-alpine` | 80 | **80**, **443** | `backend`, `frontend` |
+| `backend` | `./backend` (custom) | 8000 | **3000** | `postgres` |
+| `frontend` | `./frontend` (custom) | 5173 | **5173** | `backend` |
+| `nginx` | `nginx:1.25-alpine` | 80 | 80, 443 | `backend`, `frontend` |
 | `scheduler` | same image as `backend` | — | — | `postgres` |
 
-> In production the `frontend` service builds static files; Nginx serves them directly.
-> In development (`docker-compose.override.yml`) the Vite dev server runs with HMR.
+> Backend доступен напрямую на `localhost:3000`, frontend — на `localhost:5173`.
+> Nginx остаётся как дополнительный reverse-proxy на порту 80.
+> В development (`docker-compose.override.yml`) Vite dev server запускается с HMR и `host: true`.
 
 ### docker-compose.yml (schema)
 
@@ -433,6 +434,8 @@ services:
   backend:
     build: ./backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "3000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://finance_user:${DB_PASSWORD}@postgres/finance
       SECRET_KEY: ${SECRET_KEY}
@@ -455,6 +458,8 @@ services:
     build:
       context: ./frontend
       target: ${BUILD_TARGET:-prod}   # dev | prod
+    ports:
+      - "5173:5173"
     depends_on:
       - backend
 
@@ -473,12 +478,22 @@ volumes:
   pg_data:
 ```
 
-### Nginx routing
+### Nginx routing (порт 80, опционально)
 
 ```
-GET /api/*   →  proxy_pass http://backend:8000
-GET /*       →  root /usr/share/nginx/html (static build) | proxy_pass http://frontend:5173 (dev)
+GET /api/*         →  proxy_pass http://backend:8000
+GET /docs          →  proxy_pass http://backend:8000/docs
+GET /openapi.json  →  proxy_pass http://backend:8000/openapi.json
+GET /*             →  proxy_pass http://frontend:5173
 ```
+
+### Прямой доступ (основной способ)
+
+| Сервис | URL хоста |
+|---|---|
+| Frontend (Vite) | http://localhost:5173 |
+| Backend (FastAPI) | http://localhost:3000 |
+| Swagger UI | http://localhost:3000/docs |
 
 ---
 

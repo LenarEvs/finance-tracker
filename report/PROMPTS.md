@@ -376,3 +376,13 @@ backend-1    |   Input should be a valid string [type=string_type, input_value=U
 **Текст промпта:** «Проверь что в README.md актуален. Я хочу чтобы файл README.md был максимально простой и понятный и содержал инструкции по запуску проект. Чтобы проект можно было запустить в 1-3 команды в докере»
 
 **Результат:** README.md переписан: git clone → cp .env.example .env → docker compose up --build. Добавлено примечание об автоматической загрузке seed-данных при первом старте. Указаны ссылки на http://localhost и http://localhost/api/docs.
+
+---
+
+## P-023 · 2026-06-13 · Смена портов: backend на 3000, frontend на 5173
+
+**Назначение:** Сделать бэкенд доступным напрямую по localhost:3000, фронт — по localhost:5173.
+
+**Текст промпта:** «Задача: Сделай так чтобы бэкенд был доступен по localhost:3000, А фронт доступен по ссылке localhost:5173. Требования: Актуализируй везде где это необходимо. Актуализируй документацию ARCHITECTURE.md и README.md»
+
+**Результат:** В docker-compose.yml добавлены ports для backend (3000:8000) и frontend (5173:5173). Из docker-compose.override.yml убран дублирующий порт 8000:8000 для backend. В vite.config.ts добавлен host: true для доступности Vite dev-сервера с хоста. Обновлены README.md (таблица ссылок) и ARCHITECTURE.md (таблица сервисов, схема docker-compose, раздел Nginx routing).

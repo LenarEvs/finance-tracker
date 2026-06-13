@@ -17,6 +17,8 @@ services:
   backend:
     build: ./backend
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "3000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://finance_user:${DB_PASSWORD}@postgres/finance
       SECRET_KEY: ${SECRET_KEY}
@@ -40,6 +42,8 @@ services:
     build:
       context: ./frontend
       target: ${BUILD_TARGET:-prod}
+    ports:
+      - "5173:5173"
     depends_on:
       - backend
 

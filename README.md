@@ -30,8 +30,9 @@ docker compose up --build
 
 | Что | URL |
 |---|---|
-| Приложение | http://localhost |
-| Swagger UI | http://localhost/docs |
+| Фронтенд | http://localhost:5173 |
+| Бэкенд (API) | http://localhost:3000 |
+| Swagger UI | http://localhost:3000/docs |
 
 ---
 
