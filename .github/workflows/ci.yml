@@ -73,4 +73,8 @@ jobs:
 
       - name: Lint
         working-directory: frontend
-        run: npx eslint src/ || true
+        run: npm run lint -- --max-warnings 0 || true
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build

@@ -386,3 +386,13 @@ backend-1    |   Input should be a valid string [type=string_type, input_value=U
 **Текст промпта:** «Задача: Сделай так чтобы бэкенд был доступен по localhost:3000, А фронт доступен по ссылке localhost:5173. Требования: Актуализируй везде где это необходимо. Актуализируй документацию ARCHITECTURE.md и README.md»
 
 **Результат:** В docker-compose.yml добавлены ports для backend (3000:8000) и frontend (5173:5173). Из docker-compose.override.yml убран дублирующий порт 8000:8000 для backend. В vite.config.ts добавлен host: true для доступности Vite dev-сервера с хоста. Обновлены README.md (таблица ссылок) и ARCHITECTURE.md (таблица сервисов, схема docker-compose, раздел Nginx routing).
+
+## P-024 · 2026-06-13 · Проверка GitHub Actions pipeline
+
+**Назначение:** Убедиться, что CI pipeline (lint + тесты + сборка) проходит корректно.
+
+**Полный текст:**
+> Проверь, что pipeline в GitHub Actions проходит (lint + тесты + сборка)
+
+**Результат:**
+Выявлены и исправлены три дефекта: (1) ruff lint — 4 unused imports удалены автофиксом, E402 в conftest.py подавлены через `# noqa` (паттерн намеренный); (2) ESLint не был установлен как devDependency и отсутствовал `eslint.config.js` — добавлены `eslint`, `@eslint/js`, `globals`, `typescript-eslint`, создан конфиг; (3) в CI полностью отсутствовал шаг `npm run build` — добавлен в `frontend-lint` job.

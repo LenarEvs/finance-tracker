@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from passlib.context import CryptContext
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from app.config import settings
 from app.models.user import User
@@ -16,7 +16,6 @@ from app.models.transaction import Transaction
 from app.models.budget import Budget
 from app.models.recurring_rule import RecurringRule
 from app.models.exchange_rate import ExchangeRate
-from app.database import Base
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

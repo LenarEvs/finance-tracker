@@ -1,5 +1,4 @@
 import os
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -13,9 +12,9 @@ TEST_DATABASE_URL = os.environ.get(
 )
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
-from app.database import Base
-from app.dependencies import get_db
-from app.main import app
+from app.database import Base  # noqa: E402
+from app.dependencies import get_db  # noqa: E402
+from app.main import app  # noqa: E402
 
 
 @pytest_asyncio.fixture(scope="session")

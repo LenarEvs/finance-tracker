@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.category import Category
 from app.models.transaction import Transaction
-from app.schemas.transaction import TransactionCreate
 
 
 class ImportExportService:

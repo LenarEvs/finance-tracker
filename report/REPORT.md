@@ -381,3 +381,26 @@ SQLAlchemy + psycopg2 читает PostgreSQL `INET`-колонку как Pytho
 - Добавлен `@field_serializer("ip_address")` для явного приведения к `str` при JSON-сериализации
 
 **Результат:** API возвращает все записи, фронтенд отображает журнал.
+
+---
+
+## CI Pipeline — аудит и исправление · 2026-06-13
+
+**Задача:** убедиться, что `.github/workflows/ci.yml` работает корректно (lint + тесты + сборка).
+
+**Найденные дефекты:**
+
+1. **ruff — 7 ошибок** (4 unused imports + 3 E402):
+   - `app/seed.py`: `AsyncSession`, `Base` — лишние импорты, удалены `--fix`
+   - `app/services/import_export.py`: `TransactionCreate` — удалён `--fix`
+   - `tests/conftest.py`: `pytest` — удалён `--fix`; E402 (импорты после `os.environ[…]`) — намеренный паттерн, подавлен через `# noqa: E402`
+
+2. **ESLint сломан**: пакет отсутствовал в `devDependencies`, не было `eslint.config.js`. CI запускал `npx eslint`, который скачивал v10 и падал с «no config file». Исправление: добавлены `eslint`, `@eslint/js`, `globals`, `typescript-eslint`; создан `eslint.config.js` для TypeScript + React.
+
+3. **Нет шага сборки**: `npm run build` нигде не вызывался в CI — сломанный vite-бандл прошёл бы незамеченным. Добавлен шаг `Build` в job `frontend-lint`.
+
+**Итог после исправлений:**
+- ruff: `All checks passed!`
+- tsc: чистый (без ошибок)
+- ESLint: 2 предупреждения `no-explicit-any` (не блокируют, `|| true`)
+- `npm run build`: успешно, 1904 модулей, 5.74s
