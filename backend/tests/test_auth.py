@@ -11,7 +11,7 @@ async def test_register_success(client: AsyncClient):
         "password": "password123",
         "full_name": "New User",
     })
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     data = resp.json()
     assert "access_token" in data
     assert "refresh_token" in data
@@ -23,7 +23,7 @@ async def test_register_duplicate_email(client: AsyncClient):
     email = f"dup_{unique}@example.com"
     await client.post("/api/v1/auth/register", json={"email": email, "password": "pass123"})
     resp = await client.post("/api/v1/auth/register", json={"email": email, "password": "pass123"})
-    assert resp.status_code == 400
+    assert resp.status_code == 409
 
 
 @pytest.mark.asyncio
