@@ -27,15 +27,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   scheduler:
     build: ./backend
+    entrypoint: []
     command: python -m app.scheduler
     environment:
       DATABASE_URL: postgresql+asyncpg://finance_user:${DB_PASSWORD}@postgres/finance
       SECRET_KEY: ${SECRET_KEY}
     depends_on:
-      postgres:
+      backend:
         condition: service_healthy
 
   frontend:

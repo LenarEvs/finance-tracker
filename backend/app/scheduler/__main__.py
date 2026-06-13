@@ -15,8 +15,13 @@ async def main() -> None:
     scheduler.add_job(create_recurring_transactions, "cron", hour=0, minute=5)
     scheduler.start()
     logger.info("Scheduler started. Running daily at 00:05.")
-    # Run once on start to catch up
-    await create_recurring_transactions()
+    for attempt in range(10):
+        try:
+            await create_recurring_transactions()
+            break
+        except Exception as exc:
+            logger.warning("Startup job failed (attempt %d/10): %s", attempt + 1, exc)
+            await asyncio.sleep(10)
     try:
         while True:
             await asyncio.sleep(3600)

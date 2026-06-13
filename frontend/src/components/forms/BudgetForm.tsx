@@ -17,7 +17,7 @@ export function BudgetForm({ budgetId, defaultCategoryId, defaultYearMonth, defa
 
   const [yearMonth, setYearMonth] = useState(defaultYearMonth ?? currentMonth);
   const [categoryId, setCategoryId] = useState(defaultCategoryId ?? "");
-  const [amount, setAmount] = useState(defaultAmount ?? "");
+  const [amount, setAmount] = useState(defaultAmount ? String(parseFloat(defaultAmount)) : "");
   const [error, setError] = useState<string | null>(null);
 
   const { data: categories = [] } = useCategories("expense");
