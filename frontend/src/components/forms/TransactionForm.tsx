@@ -71,7 +71,7 @@ export function TransactionForm({ initialValues, onClose }: Props) {
         <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
           <option value="">Выберите категорию</option>
           {filteredCategories.map((c) => (
-            <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
       </div>
