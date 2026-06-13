@@ -6,36 +6,17 @@ import { importExportApi } from "../api/importExport";
 import type { TransactionFilters } from "../api/transactions";
 import { useCategories } from "../hooks/useCategories";
 
-const REQUIRED_FIELDS: { key: string; label: string; required: boolean }[] = [
-  { key: "date", label: "Дата", required: true },
-  { key: "type", label: "Тип (income/expense)", required: true },
-  { key: "amount", label: "Сумма", required: true },
-  { key: "currency", label: "Валюта", required: true },
-  { key: "category_id", label: "ID категории", required: true },
-  { key: "exchange_rate", label: "Курс (необяз.)", required: false },
-  { key: "description", label: "Описание (необяз.)", required: false },
+const MAPPING_FIELDS: { key: string; param: string; label: string; required: boolean }[] = [
+  { key: "date",        param: "col_date",        label: "Дата",                  required: true },
+  { key: "type",        param: "col_type",        label: "Тип (income/expense)",  required: true },
+  { key: "amount",      param: "col_amount",      label: "Сумма",                 required: true },
+  { key: "currency",    param: "col_currency",    label: "Валюта",                required: true },
+  { key: "description", param: "col_description", label: "Описание (необяз.)",    required: false },
 ];
 
 function parseCSVHeaders(text: string): string[] {
   const firstLine = text.split("\n")[0];
   return firstLine.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-}
-
-function remapCSV(originalText: string, headers: string[], mapping: Record<string, string>): string {
-  const lines = originalText.split("\n").filter((l) => l.trim());
-  const dataRows = lines.slice(1);
-  const fieldKeys = REQUIRED_FIELDS.map((f) => f.key);
-  const newHeader = fieldKeys.join(",");
-  const newRows = dataRows.map((line) => {
-    const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-    return fieldKeys.map((field) => {
-      const csvCol = mapping[field];
-      if (!csvCol) return "";
-      const idx = headers.indexOf(csvCol);
-      return idx >= 0 ? cols[idx] ?? "" : "";
-    }).join(",");
-  });
-  return [newHeader, ...newRows].join("\n");
 }
 
 export function ImportExport() {
@@ -45,7 +26,6 @@ export function ImportExport() {
   const [exportCategory, setExportCategory] = useState("");
 
   const [file, setFile] = useState<File | null>(null);
-  const [fileText, setFileText] = useState("");
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [dryRun, setDryRun] = useState(true);
@@ -64,11 +44,10 @@ export function ImportExport() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      setFileText(text);
       const headers = parseCSVHeaders(text);
       setCsvHeaders(headers);
       const autoMapping: Record<string, string> = {};
-      REQUIRED_FIELDS.forEach(({ key }) => {
+      MAPPING_FIELDS.forEach(({ key }) => {
         const match = headers.find((h) => h.toLowerCase() === key.toLowerCase());
         if (match) autoMapping[key] = match;
       });
@@ -102,19 +81,15 @@ export function ImportExport() {
     setImportError(null);
     setImportResult(null);
     try {
-      const hasMapping = Object.values(mapping).some(Boolean);
-      if (hasMapping) {
-        const csvContent = remapCSV(fileText, csvHeaders, mapping);
-        const blob = new Blob([csvContent], { type: "text/csv" });
-        const remappedFile = new File([blob], "import.csv", { type: "text/csv" });
-        const res = await importExportApi.importCsv(remappedFile, dryRun);
-        setImportResult(res.data);
-      } else {
-        const res = await importExportApi.importCsv(file, dryRun);
-        setImportResult(res.data);
-      }
-    } catch {
-      setImportError("Ошибка при импорте. Проверьте формат файла.");
+      const colMapping: Record<string, string> = {};
+      MAPPING_FIELDS.forEach(({ key, param }) => {
+        if (mapping[key]) colMapping[param] = mapping[key];
+      });
+      const res = await importExportApi.importCsv(file, dryRun, colMapping);
+      setImportResult(res.data);
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setImportError(detail ?? "Ошибка при импорте. Проверьте формат файла.");
     } finally {
       setImporting(false);
     }
@@ -183,7 +158,7 @@ export function ImportExport() {
             <div className="mb-4">
               <div className="text-xs font-semibold text-slate-600 mb-3">Маппинг колонок CSV → поля</div>
               <div className="space-y-2">
-                {REQUIRED_FIELDS.map(({ key, label, required }) => (
+                {MAPPING_FIELDS.map(({ key, label, required }) => (
                   <div key={key} className="flex items-center gap-2">
                     <span className="text-xs text-slate-600 w-40 flex-shrink-0">
                       {label}{required && <span className="text-red-500"> *</span>}
@@ -207,7 +182,16 @@ export function ImportExport() {
             Тестовый режим (dry-run)
           </label>
 
-          <Button className="w-full justify-center" disabled={!file || importing} onClick={handleImport}>
+          <Button
+            className="w-full justify-center"
+            disabled={
+              !file ||
+              importing ||
+              (csvHeaders.length > 0 &&
+                MAPPING_FIELDS.filter((f) => f.required).some((f) => !mapping[f.key]))
+            }
+            onClick={handleImport}
+          >
             <Upload size={14} /> {importing ? "Загрузка…" : "Загрузить"}
           </Button>
 

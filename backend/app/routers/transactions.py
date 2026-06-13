@@ -1,7 +1,8 @@
 import uuid
 from datetime import date
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.dependencies import get_current_user, get_db
 from app.schemas.transaction import TransactionCreate, TransactionResponse, TransactionUpdate
@@ -25,11 +26,15 @@ async def list_transactions(
     category_id: uuid.UUID | None = None,
     type: str | None = None,
     currency: str | None = None,
+    amount_min: Decimal | None = Query(None, ge=0),
+    amount_max: Decimal | None = Query(None, ge=0),
     page: int = 1,
     limit: int = Query(50, le=200),
     current_user=Depends(get_current_user),
     db=Depends(get_db),
 ):
+    if amount_min is not None and amount_max is not None and amount_min > amount_max:
+        raise HTTPException(status_code=422, detail="amount_min не может быть больше amount_max")
     return await TransactionService(db).list(
         current_user.id,
         from_=from_,
@@ -37,6 +42,8 @@ async def list_transactions(
         category_id=category_id,
         type=type,
         currency=currency,
+        amount_min=amount_min,
+        amount_max=amount_max,
         page=page,
         limit=limit,
     )

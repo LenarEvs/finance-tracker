@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Computed, Date, ForeignKey, Numeric, String, Text
 from sqlalchemy import TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -24,6 +24,7 @@ class Transaction(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     exchange_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False, default=Decimal("1"))
+    amount_base: Mapped[Decimal] = mapped_column(Numeric(18, 4), Computed("amount * exchange_rate", persisted=True), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     is_recurring_instance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

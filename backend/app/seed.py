@@ -76,21 +76,32 @@ async def seed():
             user_categories[user.id] = cats
         await db.flush()
 
-        # Exchange rates
+        # Exchange rates with realistic daily drift (±0.5% per day from previous)
         today = date.today()
-        for delta in range(180):
+        rng = random.Random(42)
+
+        # Build rates oldest→newest so each day drifts from the previous
+        usd_rub_by_date: dict[date, Decimal] = {}
+        eur_rub_by_date: dict[date, Decimal] = {}
+        usd_rate = 90.0
+        eur_rate = 98.0
+        for delta in range(179, -1, -1):
             d = today - timedelta(days=delta)
+            usd_rate *= 1 + rng.uniform(-0.005, 0.005)
+            eur_rate *= 1 + rng.uniform(-0.005, 0.005)
+            usd_d = Decimal(str(round(usd_rate, 6)))
+            eur_d = Decimal(str(round(eur_rate, 6)))
+            usd_rub_by_date[d] = usd_d
+            eur_rub_by_date[d] = eur_d
             for base, target, rate in [
-                ("RUB", "USD", Decimal("0.011")),
-                ("RUB", "EUR", Decimal("0.010")),
-                ("USD", "RUB", Decimal("90.5")),
-                ("EUR", "RUB", Decimal("98.0")),
+                ("USD", "RUB", usd_d),
+                ("EUR", "RUB", eur_d),
+                ("RUB", "USD", Decimal(str(round(1 / usd_rate, 8)))),
+                ("RUB", "EUR", Decimal(str(round(1 / eur_rate, 8)))),
             ]:
-                er = ExchangeRate(base_currency=base, target_currency=target, rate=rate, date=d)
-                db.add(er)
+                db.add(ExchangeRate(base_currency=base, target_currency=target, rate=rate, date=d))
 
         # Transactions: 200+ per user over 6 months
-        rng = random.Random(42)
         for user in users:
             cats = user_categories[user.id]
             income_cats = [c for c in cats if c.type == "income"]
@@ -140,6 +151,36 @@ async def seed():
                         date=tx_date,
                         description=None,
                     ))
+
+        # Foreign-currency transactions (USD/EUR) — 15 per user
+        fx_descriptions = [
+            ("USD", "Оплата фриланс-заказа", "income", (200, 800)),
+            ("USD", "Подписка на сервис", "expense", (10, 30)),
+            ("USD", "Покупка в интернет-магазине", "expense", (30, 150)),
+            ("EUR", "Оплата курса онлайн", "expense", (50, 200)),
+            ("EUR", "Перевод из-за рубежа", "income", (300, 1000)),
+        ]
+        for user in users:
+            cats = user_categories[user.id]
+            income_cats = [c for c in cats if c.type == "income"]
+            expense_cats = [c for c in cats if c.type == "expense"]
+            all_dates = list(usd_rub_by_date.keys())
+            for _ in range(15):
+                currency, desc, tx_type, (lo, hi) = rng.choice(fx_descriptions)
+                tx_date = rng.choice(all_dates)
+                cat = rng.choice(income_cats if tx_type == "income" else expense_cats)
+                amount = Decimal(str(rng.randint(lo, hi)))
+                fx_rate = usd_rub_by_date[tx_date] if currency == "USD" else eur_rub_by_date[tx_date]
+                db.add(Transaction(
+                    user_id=user.id,
+                    category_id=cat.id,
+                    type=tx_type,
+                    amount=amount,
+                    currency=currency,
+                    exchange_rate=fx_rate,
+                    date=tx_date,
+                    description=desc,
+                ))
 
         await db.flush()
 

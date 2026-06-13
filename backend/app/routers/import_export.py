@@ -39,8 +39,22 @@ async def export_csv(
 async def import_csv(
     file: UploadFile,
     dry_run: bool = True,
+    col_date: str = Query(default="date"),
+    col_type: str = Query(default="type"),
+    col_amount: str = Query(default="amount"),
+    col_currency: str = Query(default="currency"),
+    col_description: str = Query(default="description"),
     current_user=Depends(get_current_user),
     db=Depends(get_db),
 ):
     content = await file.read()
-    return await ImportExportService(db).import_csv(current_user.id, content, dry_run=dry_run)
+    return await ImportExportService(db).import_csv(
+        current_user.id,
+        content,
+        dry_run=dry_run,
+        col_date=col_date,
+        col_type=col_type,
+        col_amount=col_amount,
+        col_currency=col_currency,
+        col_description=col_description,
+    )

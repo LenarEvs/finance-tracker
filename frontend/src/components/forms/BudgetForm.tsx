@@ -63,7 +63,7 @@ export function BudgetForm({ budgetId, defaultCategoryId, defaultYearMonth, defa
       )}
       <div>
         <label className="label">Лимит (в базовой валюте)</label>
-        <input type="number" min="0.01" step="0.01" placeholder="0.00" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+        <input type="number" min="0.01" step="0.01" placeholder="0.00" className="input" value={amount} onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v) || v === "") setAmount(v); }} required />
       </div>
       {error && <p className="text-red-500 text-xs">{error}</p>}
       <div className="flex justify-end gap-2 pt-1">

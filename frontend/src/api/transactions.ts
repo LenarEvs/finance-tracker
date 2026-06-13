@@ -7,6 +7,8 @@ export interface TransactionFilters {
   category_id?: string;
   type?: TransactionType;
   currency?: string;
+  amount_min?: number;
+  amount_max?: number;
   page?: number;
   limit?: number;
 }

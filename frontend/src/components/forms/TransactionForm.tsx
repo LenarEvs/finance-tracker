@@ -78,7 +78,7 @@ export function TransactionForm({ initialValues, onClose }: Props) {
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2">
           <label className="label">Сумма</label>
-          <input type="number" min="0.01" step="0.01" placeholder="0.00" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+          <input type="number" min="0.01" step="0.01" placeholder="0.00" className="input" value={amount} onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v) || v === "") setAmount(v); }} required />
         </div>
         <div>
           <label className="label">Валюта</label>

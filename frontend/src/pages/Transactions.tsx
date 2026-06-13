@@ -7,6 +7,7 @@ import { Modal } from "../components/ui/Modal";
 import { TransactionForm } from "../components/forms/TransactionForm";
 import { useTransactions, useDeleteTransaction } from "../hooks/useTransactions";
 import { useCategories } from "../hooks/useCategories";
+import { useDebounce } from "../hooks/useDebounce";
 import type { Transaction, TransactionType } from "../types";
 import { cn } from "../lib/cn";
 
@@ -23,11 +24,16 @@ export function Transactions() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<Transaction | null>(null);
 
+  const debouncedAmountMin = useDebounce(amountMin, 400);
+  const debouncedAmountMax = useDebounce(amountMax, 400);
+
   const filters = {
     from: fromDate || undefined,
     to: toDate || undefined,
     type: (typeFilter as TransactionType) || undefined,
     category_id: categoryFilter || undefined,
+    amount_min: debouncedAmountMin ? Number(debouncedAmountMin) : undefined,
+    amount_max: debouncedAmountMax ? Number(debouncedAmountMax) : undefined,
     page,
     limit: PAGE_SIZE,
   };
@@ -36,11 +42,7 @@ export function Transactions() {
   const { data: categories = [] } = useCategories();
   const deleteMutation = useDeleteTransaction();
 
-  const displayed = transactions.filter((t) => {
-    if (amountMin && Number(t.amount) < Number(amountMin)) return false;
-    if (amountMax && Number(t.amount) > Number(amountMax)) return false;
-    return true;
-  });
+  const displayed = transactions;
 
   function openCreate() { setEditItem(null); setModalOpen(true); }
   function openEdit(t: Transaction) { setEditItem(t); setModalOpen(true); }
@@ -78,10 +80,10 @@ export function Transactions() {
           </select>
         </Field>
         <Field label="Сумма от">
-          <input type="number" placeholder="0" className="input w-24" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} />
+          <input type="number" placeholder="0" className="input w-24" value={amountMin} onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v) || v === "") setAmountMin(v); }} />
         </Field>
         <Field label="Сумма до">
-          <input type="number" placeholder="∞" className="input w-24" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} />
+          <input type="number" placeholder="∞" className="input w-24" value={amountMax} onChange={(e) => { const v = e.target.value; if (/^\d*\.?\d{0,2}$/.test(v) || v === "") setAmountMax(v); }} />
         </Field>
         <Button variant="secondary" size="sm" onClick={resetFilters}>
           <RotateCcw size={13} /> Сбросить

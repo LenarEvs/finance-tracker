@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime, timezone
+from decimal import Decimal
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -37,6 +38,8 @@ class TransactionService:
         category_id: uuid.UUID | None = None,
         type: str | None = None,
         currency: str | None = None,
+        amount_min: Decimal | None = None,
+        amount_max: Decimal | None = None,
         page: int = 1,
         limit: int = 50,
     ) -> list[Transaction]:
@@ -51,6 +54,10 @@ class TransactionService:
             q = q.where(Transaction.type == type)
         if currency:
             q = q.where(Transaction.currency == currency)
+        if amount_min is not None:
+            q = q.where(Transaction.amount_base >= amount_min)
+        if amount_max is not None:
+            q = q.where(Transaction.amount_base <= amount_max)
         q = q.order_by(Transaction.date.desc(), Transaction.created_at.desc())
         q = q.offset((page - 1) * limit).limit(limit)
         result = await self.db.execute(q)

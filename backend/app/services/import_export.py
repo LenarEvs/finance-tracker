@@ -57,9 +57,34 @@ class ImportExportService:
 
         return output.getvalue().encode("utf-8")
 
-    async def import_csv(self, user_id: uuid.UUID, content: bytes, dry_run: bool = True) -> dict:
+    async def import_csv(
+        self,
+        user_id: uuid.UUID,
+        content: bytes,
+        dry_run: bool = True,
+        col_date: str = "date",
+        col_type: str = "type",
+        col_amount: str = "amount",
+        col_currency: str = "currency",
+        col_description: str = "description",
+    ) -> dict:
+        from fastapi import HTTPException
+
         text = content.decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(text))
+
+        # Validate that all required mapped columns exist in the file
+        fieldnames = reader.fieldnames or []
+        missing = [
+            col for col in (col_date, col_type, col_amount, col_currency)
+            if col not in fieldnames
+        ]
+        if missing:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Колонки не найдены в файле: {', '.join(missing)}. "
+                       f"Доступные колонки: {', '.join(fieldnames)}",
+            )
 
         cats_result = await self.db.execute(
             select(Category).where(Category.user_id == user_id, Category.is_archived == False)  # noqa: E712
@@ -74,10 +99,10 @@ class ImportExportService:
 
         for i, row in enumerate(reader, start=2):
             try:
-                raw_date = row.get("date", "").strip()
-                raw_type = row.get("type", "").strip()
-                raw_amount = row.get("amount", "").strip()
-                raw_currency = row.get("currency", "").strip()
+                raw_date = row.get(col_date, "").strip()
+                raw_type = row.get(col_type, "").strip()
+                raw_amount = row.get(col_amount, "").strip()
+                raw_currency = row.get(col_currency, "").strip()
                 raw_category_id = row.get("category_id", "").strip()
                 raw_exchange_rate = row.get("exchange_rate", "1").strip() or "1"
 
@@ -106,7 +131,7 @@ class ImportExportService:
                     currency=raw_currency.upper(),
                     exchange_rate=exchange_rate,
                     date=tx_date,
-                    description=row.get("description", "").strip() or None,
+                    description=row.get(col_description, "").strip() or None,
                 )
                 rows_to_create.append(tx)
                 created += 1
