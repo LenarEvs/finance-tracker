@@ -71,7 +71,7 @@ export function Budgets() {
           const overBudget = bp.percent_used > 100;
           return (
             <div key={bp.budget_id} className="card p-5">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <CategoryIcon name={getCategoryIcon(bp.category_id)} size={20} />
                   <span className="font-semibold text-slate-800">{bp.category_name}</span>
