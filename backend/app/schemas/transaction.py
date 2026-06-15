@@ -6,24 +6,24 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TransactionCreate(BaseModel):
     category_id: uuid.UUID
     type: Literal["income", "expense"]
-    amount: Decimal
-    currency: str
-    exchange_rate: Decimal = Decimal("1")
+    amount: Decimal = Field(gt=0)
+    currency: str = Field(min_length=3, max_length=3)
+    exchange_rate: Decimal = Field(default=Decimal("1"), gt=0)
     date: Date
     description: str | None = None
 
 
 class TransactionUpdate(BaseModel):
     category_id: uuid.UUID | None = None
-    amount: Decimal | None = None
+    amount: Decimal | None = Field(None, gt=0)
     currency: str | None = None
-    exchange_rate: Decimal | None = None
+    exchange_rate: Decimal | None = Field(None, gt=0)
     date: Date | None = None
     description: str | None = None
 

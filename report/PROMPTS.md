@@ -509,3 +509,46 @@ Ruff и TypeScript проходили чисто. ESLint выдавал 2 пре
 > scheduler-1 | asyncpg.exceptions.UndefinedTableError: relation "recurring_rules" does not exist
 
 **Результат:** Добавлен healthcheck на сервис `backend` в `docker-compose.yml`. Scheduler теперь ждёт `condition: service_healthy` вместо простого `depends_on: postgres`. В `__main__.py` добавлен retry-loop на 10 попыток — scheduler не падает при временной недоступности БД.
+
+---
+
+## P-031 · 2026-06-15 · Исправление 4 дефектов (ревью)
+
+**Назначение:** Исправить четыре дефекта, выявленных в ходе ревью кода.
+
+**Полный текст промпта:**
+```
+Роль: Senior Python/FastAPI разработчик.
+
+Контекст: Finance Tracker (FastAPI + PostgreSQL + React). Ревью выявило 4 дефекта. Исправь все.
+
+Дефект 1 — КРИТИЧНО: планировщик падает с NoReferencedTableError
+Файл: backend/app/scheduler/jobs.py и backend/app/scheduler/__main__.py
+Симптом: при запуске create_recurring_transactions() в контейнере scheduler:
+  sqlalchemy.exc.NoReferencedTableError: Foreign key associated with column
+  'recurring_rules.user_id' could not find table 'users'
+Причина: jobs.py импортирует только RecurringRule и Transaction, модели User и
+Category никогда не регистрируются в SQLAlchemy MetaData, FK не резолвится.
+Фикс: в начало jobs.py добавить импорты всех моделей [...]
+
+Дефект 2 — Серверная валидация возвращает 500 вместо 422
+Файлы: backend/app/schemas/transaction.py, backend/app/schemas/category.py
+Симптомы: POST /transactions с amount="-50" → HTTP 500; POST /categories с color="notacolor" → HTTP 500
+Фикс: добавить Pydantic Field(gt=0) для amount/exchange_rate и field_validator для color (#RRGGBB)
+
+Дефект 3 — Конфликт порта 5432 в docker-compose.override.yml
+Симптом: docker compose up падает: Bind for 0.0.0.0:5432 failed
+Фикс: порт → "127.0.0.1:5433:5432"
+
+Дефект 4 — 403 вместо 401 при отсутствии токена авторизации
+Файл: backend/app/dependencies.py
+Симптом: GET /transactions без Authorization → HTTP 403 (должен быть 401)
+Фикс: HTTPBearer(auto_error=False) + ручной raise HTTPException 401
+```
+
+**Результат:**
+1. `jobs.py` — добавлены 5 импортов моделей (`user`, `category`, `exchange_rate`, `budget`, `audit_log`) до использования, `__main__.py` покрывается транзитивно.
+2. `schemas/transaction.py` — `amount` и `exchange_rate` получили `Field(gt=0)`, `currency` — `Field(min_length=3, max_length=3)`.
+3. `schemas/category.py` — добавлен `@field_validator("color")` с проверкой `#[0-9A-Fa-f]{6}` в `CategoryCreate` и `CategoryUpdate`.
+4. `docker-compose.override.yml` — порт postgres изменён с `"5432:5432"` на `"127.0.0.1:5433:5432"`.
+5. `dependencies.py` — `bearer_scheme = HTTPBearer(auto_error=False)`, добавлена проверка `credentials is None` с `raise HTTPException(401)`.

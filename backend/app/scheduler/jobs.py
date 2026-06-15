@@ -4,6 +4,11 @@ from datetime import date
 
 from sqlalchemy import select
 
+import app.models.audit_log  # noqa: F401
+import app.models.budget  # noqa: F401
+import app.models.category  # noqa: F401
+import app.models.exchange_rate  # noqa: F401
+import app.models.user  # noqa: F401
 from app.database import AsyncSessionLocal
 from app.models.recurring_rule import RecurringRule
 from app.models.transaction import Transaction
