@@ -552,3 +552,34 @@ Category никогда не регистрируются в SQLAlchemy MetaData
 3. `schemas/category.py` — добавлен `@field_validator("color")` с проверкой `#[0-9A-Fa-f]{6}` в `CategoryCreate` и `CategoryUpdate`.
 4. `docker-compose.override.yml` — порт postgres изменён с `"5432:5432"` на `"127.0.0.1:5433:5432"`.
 5. `dependencies.py` — `bearer_scheme = HTTPBearer(auto_error=False)`, добавлена проверка `credentials is None` с `raise HTTPException(401)`.
+
+---
+
+## P-032 · 2026-06-15 · Улучшение CSV-экспорта транзакций
+
+**Назначение:** Сделать CSV-выгрузку транзакций читаемой: убрать технические UUID-поля, заменить `category_id` на название категории, нормализовать числа и перевести заголовки на русский.
+
+**Полный текст промпта:**
+```
+Роль: Senior Python/FastAPI разработчик.
+
+Задача: улучшить CSV-экспорт транзакций в Finance Tracker.
+
+Файл для правки: backend/app/services/import_export.py
+
+## Текущий вид (плохо)
+id,date,type,amount,currency,exchange_rate,category_id,description
+a8f0ab0b-...,2026-06-15,income,50000.0000,RUB,1.000000,c237e57e-...,Зарплата
+
+## Требуемый вид (цель)
+Дата,Тип,Сумма,Валюта,Курс,Категория,Описание
+2026-06-15,income,50000,RUB,1,Зарплата,Ежемесячная зарплата
+
+## Что исправить
+1. Убрать колонку id
+2. Заменить category_id на название категории (JOIN с categories)
+3. Убрать лишние нули: str(Decimal(str(value)).normalize())
+4. Заголовки сделать русскими, значения Тип оставить на английском
+```
+
+**Результат:** В `export_csv` запрос переделан на `select(Transaction, Category.name).outerjoin(Category, ...)` — итерация по парам `(tx, category_name)`. Нормализация чисел через `format(Decimal(str(v)).normalize(), "f")` — форматтер `"f"` предотвращает научную нотацию (`5E+4`) для целых значений. Заголовки заменены на русские. `ruff check` чист, все 21 тест зелёные.

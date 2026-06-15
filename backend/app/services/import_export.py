@@ -25,7 +25,11 @@ class ImportExportService:
         type: str | None = None,
         currency: str | None = None,
     ) -> AsyncIterator[bytes]:
-        q = select(Transaction).where(Transaction.user_id == user_id)
+        q = (
+            select(Transaction, Category.name.label("category_name"))
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(Transaction.user_id == user_id)
+        )
         if from_:
             q = q.where(Transaction.date >= from_)
         if to:
@@ -38,20 +42,22 @@ class ImportExportService:
             q = q.where(Transaction.currency == currency)
         q = q.order_by(Transaction.date.desc())
         result = await self.db.execute(q)
-        transactions = result.scalars().all()
+        rows = result.all()
+
+        def _fmt(value) -> str:
+            return format(Decimal(str(value)).normalize(), "f")
 
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["id", "date", "type", "amount", "currency", "exchange_rate", "category_id", "description"])
-        for tx in transactions:
+        writer.writerow(["Дата", "Тип", "Сумма", "Валюта", "Курс", "Категория", "Описание"])
+        for tx, category_name in rows:
             writer.writerow([
-                str(tx.id),
                 tx.date.isoformat(),
                 tx.type,
-                str(tx.amount),
+                _fmt(tx.amount),
                 tx.currency,
-                str(tx.exchange_rate),
-                str(tx.category_id),
+                _fmt(tx.exchange_rate),
+                category_name or "",
                 tx.description or "",
             ])
 
