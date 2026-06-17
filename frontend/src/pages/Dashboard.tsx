@@ -19,7 +19,7 @@ export function Dashboard() {
   const { data: topData = [] } = useTopCategories(yearMonth);
 
   const fmt = (v: string | number | undefined) =>
-    v !== undefined ? Number(v).toLocaleString("ru-RU") : "—";
+    v !== undefined ? Number(v).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
 
   const balance = Number(summary?.balance ?? 0);
 
@@ -113,7 +113,7 @@ export function Dashboard() {
                   <span className="text-sm font-medium text-slate-700">{item.category_name}</span>
                 </div>
                 <span className="text-sm font-semibold text-red-500">
-                  {Number(item.amount).toLocaleString("ru-RU")} ₽
+                  {Number(item.amount).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
                 </span>
               </div>
             ))}
