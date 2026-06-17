@@ -44,6 +44,7 @@ async def import_csv(
     col_amount: str = Query(default="amount"),
     col_currency: str = Query(default="currency"),
     col_description: str = Query(default="description"),
+    col_category: str = Query(default="category"),
     current_user=Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -57,4 +58,5 @@ async def import_csv(
         col_amount=col_amount,
         col_currency=col_currency,
         col_description=col_description,
+        col_category=col_category,
     )

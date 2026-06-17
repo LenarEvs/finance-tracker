@@ -73,13 +73,13 @@ class ImportExportService:
         col_amount: str = "amount",
         col_currency: str = "currency",
         col_description: str = "description",
+        col_category: str = "category",
     ) -> dict:
         from fastapi import HTTPException
 
         text = content.decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(text))
 
-        # Validate that all required mapped columns exist in the file
         fieldnames = reader.fieldnames or []
         missing = [
             col for col in (col_date, col_type, col_amount, col_currency)
@@ -95,7 +95,9 @@ class ImportExportService:
         cats_result = await self.db.execute(
             select(Category).where(Category.user_id == user_id, Category.is_archived == False)  # noqa: E712
         )
-        valid_category_ids = {str(c.id) for c in cats_result.scalars().all()}
+        all_categories = cats_result.scalars().all()
+        category_by_name: dict[str, uuid.UUID] = {c.name.lower(): c.id for c in all_categories}
+        category_by_id: set[str] = {str(c.id) for c in all_categories}
 
         created = 0
         skipped = 0
@@ -109,11 +111,22 @@ class ImportExportService:
                 raw_type = row.get(col_type, "").strip()
                 raw_amount = row.get(col_amount, "").strip()
                 raw_currency = row.get(col_currency, "").strip()
-                raw_category_id = row.get("category_id", "").strip()
                 raw_exchange_rate = row.get("exchange_rate", "1").strip() or "1"
 
-                if not raw_date or not raw_type or not raw_amount or not raw_currency or not raw_category_id:
+                if not raw_date or not raw_type or not raw_amount or not raw_currency:
                     errors.append({"row": i, "error": "Missing required field"})
+                    skipped += 1
+                    continue
+
+                raw_cat = row.get(col_category, "").strip()
+                category_id: uuid.UUID | None = None
+                if raw_cat:
+                    category_id = category_by_name.get(raw_cat.lower())
+                    if category_id is None and raw_cat in category_by_id:
+                        category_id = uuid.UUID(raw_cat)
+
+                if category_id is None:
+                    errors.append({"row": i, "error": f"Категория не найдена: '{raw_cat}'"})
                     skipped += 1
                     continue
 
@@ -124,14 +137,10 @@ class ImportExportService:
                     raise ValueError("amount must be > 0")
                 if raw_type not in ("income", "expense"):
                     raise ValueError(f"invalid type: {raw_type}")
-                if raw_category_id not in valid_category_ids:
-                    errors.append({"row": i, "error": f"category_id {raw_category_id} not found"})
-                    skipped += 1
-                    continue
 
                 tx = Transaction(
                     user_id=user_id,
-                    category_id=uuid.UUID(raw_category_id),
+                    category_id=category_id,
                     type=raw_type,
                     amount=amount,
                     currency=raw_currency.upper(),

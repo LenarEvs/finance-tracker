@@ -603,3 +603,25 @@ nginx-1 | host not found in upstream "frontend" in /etc/nginx/conf.d/default.con
 ```
 
 **Результат:** Переработана production-архитектура nginx. Вместо прокси к отдельному `frontend`-контейнеру nginx теперь собирает фронтенд самостоятельно (`docker/nginx/Dockerfile` — multi-stage: `node:20-alpine → npm run build → nginx:1.25-alpine`). Статические файлы кладутся в `/usr/share/nginx/html`, `nginx.conf` переключён на `try_files` (SPA-fallback). Отдельная `frontend`-служба убрана из `docker-compose.yml`. В `docker-compose.override.yml` (dev) добавлен `frontend` (Vite dev server) с health check, nginx переопределяется на `nginx.dev.conf`, который проксирует `/ → frontend:5173`. Итог: `docker compose up` работает без ошибок для преподавателя.
+
+---
+
+## P-034 · 2026-06-17 · Исправление CSV-импорта: маппинг категории по имени
+
+**Назначение:** CSV-импорт принимал только `category_id` с UUID. Реальные банковские CSV содержат названия категорий — загрузить их было невозможно.
+
+**Промпт:**
+```
+ты senior fullstack
+
+Задача
+Исправь CSV-импорт неполноценный — import_export.py:106 требует колонку category_id с UUID,
+и категория не входит в маппинг. Реальный банковский CSV (с названиями категорий) загрузить нельзя.
+Нужен маппинг категории по имени
+
+Требования
+
+* Не трогай логику экспорта
+```
+
+**Результат:** Добавлен параметр `col_category` в роутер и сервис импорта. Сервис строит два словаря: `category_by_name` (имя в нижнем регистре → UUID) и `category_by_id` (для обратной совместимости с UUID). В цикле обработки строк сначала пробует имя (case-insensitive), затем UUID. Во фронтенде добавлено поле "Категория" в `MAPPING_FIELDS` (required). Логика экспорта не затронута.

@@ -11,6 +11,7 @@ const MAPPING_FIELDS: { key: string; param: string; label: string; required: boo
   { key: "type",        param: "col_type",        label: "Тип (income/expense)",  required: true },
   { key: "amount",      param: "col_amount",      label: "Сумма",                 required: true },
   { key: "currency",    param: "col_currency",    label: "Валюта",                required: true },
+  { key: "category",    param: "col_category",    label: "Категория",             required: true },
   { key: "description", param: "col_description", label: "Описание (необяз.)",    required: false },
 ];
 
@@ -121,7 +122,7 @@ export function ImportExport() {
             <Field label="Категория">
               <select className="input" value={exportCategory} onChange={(e) => setExportCategory(e.target.value)}>
                 <option value="">Все категории</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Field>
           </div>
