@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -30,7 +30,7 @@ async def list_audit_log(
     if from_:
         q = q.where(AuditLog.occurred_at >= from_)
     if to:
-        q = q.where(AuditLog.occurred_at <= to)
+        q = q.where(AuditLog.occurred_at < to + timedelta(days=1))
     q = q.order_by(AuditLog.occurred_at.desc()).offset((page - 1) * limit).limit(limit)
     result = await db.execute(q)
     return result.scalars().all()

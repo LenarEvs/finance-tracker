@@ -12,6 +12,7 @@ import app.models.user  # noqa: F401
 from app.database import AsyncSessionLocal
 from app.models.recurring_rule import RecurringRule
 from app.models.transaction import Transaction
+from app.services.audit import write_audit
 
 
 def _next_month_date(day: int, current_date: date) -> date:
@@ -50,6 +51,20 @@ async def create_recurring_transactions() -> None:
                 recurring_rule_id=rule.id,
             )
             db.add(tx)
+            await write_audit(
+                db,
+                user_id=rule.user_id,
+                entity_type="transaction",
+                entity_id=tx.id,
+                action="create",
+                after_data={
+                    "type": tx.type,
+                    "amount": str(tx.amount),
+                    "currency": tx.currency,
+                    "date": tx.date.isoformat(),
+                    "recurring_rule_id": str(rule.id),
+                },
+            )
             rule.next_run_date = _next_month_date(rule.day_of_month, rule.next_run_date)
 
         await db.commit()
