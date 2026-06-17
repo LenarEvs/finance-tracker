@@ -39,7 +39,10 @@ export function AuditLog() {
     limit: PAGE_SIZE,
   };
 
-  const { data: logs = [], isLoading } = useAuditLog(filters);
+  const { data, isLoading } = useAuditLog(filters);
+  const logs = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.pages ?? 1;
 
   function resetFilters() {
     setEntityType(""); setAction(""); setFromDate(""); setToDate(""); setPage(1);
@@ -116,14 +119,17 @@ export function AuditLog() {
         </div>
       </div>
 
+      <div className="flex items-center justify-center gap-2 text-sm text-slate-500 mr-4">
+        {!isLoading && `Всего: ${total}`}
+      </div>
       <div className="flex items-center justify-center gap-2">
         <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
           <ChevronLeft size={14} /> Пред
         </Button>
         <span className="px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg">
-          Страница {page}
+          Страница {page} из {totalPages}
         </span>
-        <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={logs.length < PAGE_SIZE}>
+        <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
           След <ChevronRight size={14} />
         </Button>
       </div>

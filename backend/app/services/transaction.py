@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transaction import Transaction
@@ -42,26 +42,31 @@ class TransactionService:
         amount_max: Decimal | None = None,
         page: int = 1,
         limit: int = 50,
-    ) -> list[Transaction]:
-        q = select(Transaction).where(Transaction.user_id == user_id)
+    ) -> tuple[list[Transaction], int]:
+        base = select(Transaction).where(Transaction.user_id == user_id)
         if from_:
-            q = q.where(Transaction.date >= from_)
+            base = base.where(Transaction.date >= from_)
         if to:
-            q = q.where(Transaction.date <= to)
+            base = base.where(Transaction.date <= to)
         if category_id:
-            q = q.where(Transaction.category_id == category_id)
+            base = base.where(Transaction.category_id == category_id)
         if type:
-            q = q.where(Transaction.type == type)
+            base = base.where(Transaction.type == type)
         if currency:
-            q = q.where(Transaction.currency == currency)
+            base = base.where(Transaction.currency == currency)
         if amount_min is not None:
-            q = q.where(Transaction.amount_base >= amount_min)
+            base = base.where(Transaction.amount_base >= amount_min)
         if amount_max is not None:
-            q = q.where(Transaction.amount_base <= amount_max)
-        q = q.order_by(Transaction.date.desc(), Transaction.created_at.desc())
-        q = q.offset((page - 1) * limit).limit(limit)
-        result = await self.db.execute(q)
-        return list(result.scalars().all())
+            base = base.where(Transaction.amount_base <= amount_max)
+
+        total: int = (
+            await self.db.execute(select(func.count()).select_from(base.subquery()))
+        ).scalar_one()
+
+        items_q = base.order_by(Transaction.date.desc(), Transaction.created_at.desc())
+        items_q = items_q.offset((page - 1) * limit).limit(limit)
+        items = list((await self.db.execute(items_q)).scalars().all())
+        return items, total
 
     async def get(self, user_id: uuid.UUID, transaction_id: uuid.UUID) -> Transaction:
         result = await self.db.execute(

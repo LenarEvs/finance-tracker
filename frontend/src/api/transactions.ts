@@ -1,4 +1,4 @@
-import type { Transaction, TransactionType } from "../types";
+import type { Page, Transaction, TransactionType } from "../types";
 import apiClient from "./client";
 
 export interface TransactionFilters {
@@ -15,7 +15,7 @@ export interface TransactionFilters {
 
 export const transactionsApi = {
   list: (filters?: TransactionFilters) =>
-    apiClient.get<Transaction[]>("/transactions", { params: filters }),
+    apiClient.get<Page<Transaction>>("/transactions", { params: filters }),
 
   get: (id: string) =>
     apiClient.get<Transaction>(`/transactions/${id}`),

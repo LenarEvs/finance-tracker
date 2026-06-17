@@ -650,6 +650,29 @@ FastAPI `HTTPBearer` по умолчанию возвращает 403 при о�
 
 ---
 
+### 2026-06-17 — Пагинация с общим счётчиком
+
+**Проблема:** Оба list-эндпоинта (`/transactions`, `/audit-log`) возвращали голый массив. Фронтенд определял конец списка по `length < PAGE_SIZE`, пользователь не видел ни общего числа записей, ни числа страниц.
+
+**Что изменено:**
+
+| Файл | Изменение |
+|---|---|
+| `backend/app/schemas/page.py` (новый) | Generic-схема `Page[T]` с полями `items`, `total`, `page`, `pages` |
+| `backend/app/services/transaction.py` | `list()` возвращает `(items, total)` — добавлен `SELECT COUNT(*) FROM (base_q) AS sub` |
+| `backend/app/routers/transactions.py` | `response_model=Page[TransactionResponse]`; сборка `Page(...)` с `pages = max(1, ceil(total/limit))` |
+| `backend/app/routers/audit_log.py` | Аналогично; count-запрос добавлен инлайн |
+| `frontend/src/types/index.ts` | Добавлен `interface Page<T>` |
+| `frontend/src/api/transactions.ts` | Тип ответа `Page<Transaction>` |
+| `frontend/src/api/auditLog.ts` | Тип ответа `Page<AuditLog>` |
+| `frontend/src/hooks/useTransactions.ts` | Добавлен `placeholderData` для плавной навигации |
+| `frontend/src/pages/Transactions.tsx` | `data.items/total/pages`; "Найдено: N", "Страница X из Y"; кнопка "След" — `page >= totalPages` |
+| `frontend/src/pages/AuditLog.tsx` | Аналогично; добавлена строка "Всего: N" |
+
+**Ключевое решение:** COUNT через subquery (`select(func.count()).select_from(base.subquery())`) — единственный способ переиспользовать все фильтры без дублирования условий.
+
+---
+
 ### 2026-06-17 — Аудит recurring-транзакций и off-by-one в фильтре аудита
 
 **Проблема 1:** `jobs.py` создавал транзакции через `db.add(tx)` без вызова `write_audit`. По ТЗ каждая транзакция должна попадать в лог.

@@ -5,6 +5,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.dependencies import get_current_user, get_db
+from app.schemas.page import Page
 from app.schemas.transaction import TransactionCreate, TransactionResponse, TransactionUpdate
 from app.services.transaction import TransactionService
 
@@ -18,7 +19,7 @@ def _get_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
-@router.get("", response_model=list[TransactionResponse])
+@router.get("", response_model=Page[TransactionResponse])
 async def list_transactions(
     request: Request,
     from_: date | None = Query(None, alias="from"),
@@ -35,7 +36,7 @@ async def list_transactions(
 ):
     if amount_min is not None and amount_max is not None and amount_min > amount_max:
         raise HTTPException(status_code=422, detail="amount_min не может быть больше amount_max")
-    return await TransactionService(db).list(
+    items, total = await TransactionService(db).list(
         current_user.id,
         from_=from_,
         to=to,
@@ -47,6 +48,7 @@ async def list_transactions(
         page=page,
         limit=limit,
     )
+    return Page(items=items, total=total, page=page, pages=max(1, (total + limit - 1) // limit))
 
 
 @router.post("", response_model=TransactionResponse, status_code=201)

@@ -38,11 +38,12 @@ export function Transactions() {
     limit: PAGE_SIZE,
   };
 
-  const { data: transactions = [], isLoading } = useTransactions(filters);
+  const { data, isLoading } = useTransactions(filters);
+  const transactions = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.pages ?? 1;
   const { data: categories = [] } = useCategories();
   const deleteMutation = useDeleteTransaction();
-
-  const displayed = transactions;
 
   function openCreate() { setEditItem(null); setModalOpen(true); }
   function openEdit(t: Transaction) { setEditItem(t); setModalOpen(true); }
@@ -92,7 +93,7 @@ export function Transactions() {
 
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-slate-500">
-          {isLoading ? "Загрузка…" : `Найдено: ${displayed.length} транзакций`}
+          {isLoading ? "Загрузка…" : `Найдено: ${total} транзакций`}
         </span>
         <Button size="sm" onClick={openCreate}>
           <Plus size={14} /> Добавить
@@ -112,12 +113,12 @@ export function Transactions() {
               </tr>
             </thead>
             <tbody>
-              {displayed.length === 0 && !isLoading && (
+              {transactions.length === 0 && !isLoading && (
                 <tr>
                   <td colSpan={7} className="text-center py-10 text-slate-400 text-sm">Транзакции не найдены</td>
                 </tr>
               )}
-              {displayed.map((t) => (
+              {transactions.map((t) => (
                 <tr key={t.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3 text-sm text-slate-700">{t.date}</td>
                   <td className="px-4 py-3">
@@ -159,9 +160,9 @@ export function Transactions() {
           <ChevronLeft size={14} /> Пред
         </Button>
         <span className="px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg">
-          Страница {page}
+          Страница {page} из {totalPages}
         </span>
-        <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={transactions.length < PAGE_SIZE}>
+        <Button variant="secondary" size="sm" onClick={() => setPage((p) => p + 1)} disabled={page >= totalPages}>
           След <ChevronRight size={14} />
         </Button>
       </div>

@@ -1,4 +1,4 @@
-import type { AuditLog } from "../types";
+import type { AuditLog, Page } from "../types";
 import apiClient from "./client";
 
 export interface AuditLogFilters {
@@ -12,7 +12,7 @@ export interface AuditLogFilters {
 
 export const auditLogApi = {
   list: (filters?: AuditLogFilters) =>
-    apiClient.get<AuditLog[]>("/audit-log", { params: filters }),
+    apiClient.get<Page<AuditLog>>("/audit-log", { params: filters }),
 
   get: (id: number) =>
     apiClient.get<AuditLog>(`/audit-log/${id}`),

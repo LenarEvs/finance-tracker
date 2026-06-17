@@ -5,6 +5,7 @@ export function useTransactions(filters?: TransactionFilters) {
   return useQuery({
     queryKey: ["transactions", filters],
     queryFn: () => transactionsApi.list(filters).then((r) => r.data),
+    placeholderData: (prev) => prev,
   });
 }
 
