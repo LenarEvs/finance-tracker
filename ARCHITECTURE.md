@@ -288,7 +288,9 @@ finance-tracker/
 │
 ├── docker/
 │   ├── nginx/
-│   │   └── nginx.conf               # Reverse proxy: /api → backend, / → frontend
+│   │   ├── Dockerfile               # Multi-stage: builds frontend → embeds in nginx
+│   │   ├── nginx.conf               # Production: static file serving + SPA fallback
+│   │   └── nginx.dev.conf           # Dev: proxy to Vite dev server
 │   └── postgres/
 │       └── init.sql                 # DB creation, extensions (uuid-ossp, pg_trgm)
 │
@@ -402,96 +404,93 @@ Auth: `Authorization: Bearer <JWT>` on all routes except `/auth/*`
 
 | Service | Image / Build | Internal Port | Exposed Port | Depends On |
 |---|---|---|---|---|
-| `postgres` | `postgres:16-alpine` | 5432 | 5432 (dev only) | — |
-| `backend` | `./backend` (custom) | 8000 | **3000** | `postgres` |
-| `frontend` | `./frontend` (custom) | 5173 | **5173** | `backend` |
-| `nginx` | `nginx:1.25-alpine` | 80 | 80, 443 | `backend`, `frontend` |
-| `scheduler` | same image as `backend` | — | — | `postgres` |
+| `postgres` | `postgres:16-alpine` | 5432 | 5433 (dev only) | — |
+| `backend` | `./backend` (custom) | 8000 | **3000** | `postgres` (healthy) |
+| `scheduler` | same image as `backend` | — | — | `backend` (healthy) |
+| `nginx` | `docker/nginx/Dockerfile` (embeds built frontend) | 80 | **80** | `backend` (healthy) |
+| `frontend` | `./frontend` (dev only, via override) | 5173 | 5173 | — |
 
-> Backend доступен напрямую на `localhost:3000`, frontend — на `localhost:5173`.
-> Nginx остаётся как дополнительный reverse-proxy на порту 80.
-> В development (`docker-compose.override.yml`) Vite dev server запускается с HMR и `host: true`.
+> **Production** (`docker compose up`): nginx builds the frontend static files and serves them directly — no separate `frontend` service.  
+> **Development** (`docker compose up` with override): Vite dev server starts as `frontend` service; nginx is overridden to proxy `/ → frontend:5173` using `nginx.dev.conf`.  
+> Backend доступен напрямую на `localhost:3000`, Swagger — `localhost:3000/docs`.
 
 ### docker-compose.yml (schema)
 
 ```yaml
 services:
-
   postgres:
     image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: finance
-      POSTGRES_USER: finance_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U finance_user -d finance"]
-      interval: 10s
-      retries: 5
+    # ... (healthcheck included)
 
   backend:
     build: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
-    ports:
-      - "3000:8000"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://finance_user:${DB_PASSWORD}@postgres/finance
-      SECRET_KEY: ${SECRET_KEY}
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      REFRESH_TOKEN_EXPIRE_DAYS: 30
-    depends_on:
-      postgres:
-        condition: service_healthy
+    ports: ["3000:8000"]
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck: ...
 
   scheduler:
     build: ./backend
     command: python -m app.scheduler
-    environment:
-      DATABASE_URL: postgresql+asyncpg://finance_user:${DB_PASSWORD}@postgres/finance
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  frontend:
-    build:
-      context: ./frontend
-      target: ${BUILD_TARGET:-prod}   # dev | prod
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
+    depends_on: { backend: { condition: service_healthy } }
 
   nginx:
-    image: nginx:1.25-alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - backend
-      - frontend
-
-volumes:
-  pg_data:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile   # embeds built frontend
+    ports: ["80:80"]
+    depends_on: { backend: { condition: service_healthy } }
 ```
 
-### Nginx routing (порт 80, опционально)
+### docker-compose.override.yml (dev additions)
 
+```yaml
+services:
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes: [./backend:/app]
+
+  frontend:
+    build: { context: ./frontend, target: dev }
+    volumes: [./frontend:/app, /app/node_modules]
+    ports: ["5173:5173"]
+    healthcheck: { test: wget localhost:5173 }
+
+  nginx:
+    volumes:
+      - ./docker/nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on: { frontend: { condition: service_healthy } }
+```
+
+### Nginx routing (порт 80)
+
+**Production** (`nginx.conf` — static files from image):
 ```
 GET /api/*         →  proxy_pass http://backend:8000
 GET /docs          →  proxy_pass http://backend:8000/docs
 GET /openapi.json  →  proxy_pass http://backend:8000/openapi.json
-GET /*             →  proxy_pass http://frontend:5173
+GET /*             →  try_files $uri /index.html  (SPA fallback)
 ```
 
-### Прямой доступ (основной способ)
+**Development** (`nginx.dev.conf` — proxied Vite server):
+```
+GET /api/*         →  proxy_pass http://backend:8000
+GET /*             →  proxy_pass http://frontend:5173  (+ WS upgrade)
+```
 
-| Сервис | URL хоста |
+### Nginx files
+
+| File | Purpose |
 |---|---|
-| Frontend (Vite) | http://localhost:5173 |
+| `docker/nginx/Dockerfile` | Multi-stage: builds frontend → embeds dist in nginx image |
+| `docker/nginx/nginx.conf` | Production config (static file serving + SPA fallback) |
+| `docker/nginx/nginx.dev.conf` | Dev config (proxy to Vite dev server) |
+
+### Доступ
+
+| Сервис | URL |
+|---|---|
+| Frontend (prod via nginx) | http://localhost |
+| Frontend (dev direct) | http://localhost:5173 |
 | Backend (FastAPI) | http://localhost:3000 |
 | Swagger UI | http://localhost:3000/docs |
 

@@ -613,6 +613,43 @@ FastAPI `HTTPBearer` по умолчанию возвращает 403 при о�
 
 ---
 
+### Этап 12 — Исправление nginx "host not found in upstream frontend" (2026-06-17)
+
+#### Проблема
+
+При `docker compose up` nginx падал с ошибкой:
+```
+[emerg] host not found in upstream "frontend" in /etc/nginx/conf.d/default.conf:24
+```
+Фронтенд был недоступен на порту 80. API и Swagger (порт 3000) работали.
+
+#### Причина
+
+Две проблемы одновременно:
+
+1. **Неверный порт в nginx.conf для production**: `BUILD_TARGET=prod` собирает frontend-контейнер как static nginx на порту **80**, но `nginx.conf` проксировал на `frontend:5173` (порт Vite dev server). DNS разрешался, но соединение отвергалось.
+2. **Отсутствие отказоустойчивости**: nginx читает все upstream-хосты при старте. Если frontend-контейнер не запустился (ошибка сборки, занятый порт), nginx крашился фатально с `host not found`.
+
+#### Что изменено
+
+| Файл | Изменение |
+|---|---|
+| `docker/nginx/Dockerfile` (новый) | Multi-stage: `node:20-alpine` → `npm run build` → `nginx:1.25-alpine`. Dist-файлы копируются в `/usr/share/nginx/html`. |
+| `docker/nginx/nginx.conf` | Убран `proxy_pass http://frontend:5173`. Добавлен `root /usr/share/nginx/html` + `try_files $uri /index.html` (SPA fallback). |
+| `docker/nginx/nginx.dev.conf` (новый) | Dev-конфиг: `/ → proxy_pass http://frontend:5173` с WS upgrade. |
+| `docker-compose.yml` | `nginx`: `image: nginx:...` → `build: {context: ., dockerfile: docker/nginx/Dockerfile}`. Удалена служба `frontend`. |
+| `docker-compose.override.yml` | Добавлена служба `frontend` (Vite dev server) с health check. `nginx` переопределён: монтируется `nginx.dev.conf`, добавлен `depends_on: frontend: condition: service_healthy`. |
+
+#### Ключевые решения
+
+| Решение | Обоснование |
+|---|---|
+| Встроить frontend в nginx-образ | Устраняет зависимость от отдельного контейнера и DNS-ошибку |
+| Два nginx.conf (prod + dev) | Одна конфигурация не может обслуживать и статику, и Vite-прокси |
+| Health check на Vite (`wget localhost:5173`) | Nginx ждёт готовности Vite перед стартом, избегая `host not found` в dev |
+
+---
+
 ## История промптов
 
 Полная хронология всех промптов, использованных в ходе разработки:

@@ -7,12 +7,26 @@ services:
 
   frontend:
     build:
+      context: ./frontend
       target: dev
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
       - "5173:5173"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5173 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+
+  nginx:
+    volumes:
+      - ./docker/nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      frontend:
+        condition: service_healthy
 
   postgres:
     ports:

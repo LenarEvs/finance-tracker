@@ -583,3 +583,23 @@ a8f0ab0b-...,2026-06-15,income,50000.0000,RUB,1.000000,c237e57e-...,Зарпла
 ```
 
 **Результат:** В `export_csv` запрос переделан на `select(Transaction, Category.name).outerjoin(Category, ...)` — итерация по парам `(tx, category_name)`. Нормализация чисел через `format(Decimal(str(v)).normalize(), "f")` — форматтер `"f"` предотвращает научную нотацию (`5E+4`) для целых значений. Заголовки заменены на русские. `ruff check` чист, все 21 тест зелёные.
+
+---
+
+## P-033 · 2026-06-17 · Исправление ошибки nginx "host not found in upstream frontend"
+
+**Назначение:** Устранить ошибку запуска nginx при `docker compose up`: `host not found in upstream "frontend"` — приложение недоступно по порту 80.
+
+**Промпт:**
+```
+docker compose up - works
+api endpoint and swagger - works (port 3000)
+
+frontend не отвечает
+вижу ошибку в логе compose:
+nginx-1 | host not found in upstream "frontend" in /etc/nginx/conf.d/default.conf:24
+
+При запуске приложения преподаватель видит такую ошибку
+```
+
+**Результат:** Переработана production-архитектура nginx. Вместо прокси к отдельному `frontend`-контейнеру nginx теперь собирает фронтенд самостоятельно (`docker/nginx/Dockerfile` — multi-stage: `node:20-alpine → npm run build → nginx:1.25-alpine`). Статические файлы кладутся в `/usr/share/nginx/html`, `nginx.conf` переключён на `try_files` (SPA-fallback). Отдельная `frontend`-служба убрана из `docker-compose.yml`. В `docker-compose.override.yml` (dev) добавлен `frontend` (Vite dev server) с health check, nginx переопределяется на `nginx.dev.conf`, который проксирует `/ → frontend:5173`. Итог: `docker compose up` работает без ошибок для преподавателя.
