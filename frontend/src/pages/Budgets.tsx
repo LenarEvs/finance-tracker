@@ -7,6 +7,8 @@ import { BudgetForm } from "../components/forms/BudgetForm";
 import { useBudgetProgress, useDeleteBudget } from "../hooks/useBudgets";
 import { useCategories } from "../hooks/useCategories";
 import { CategoryIcon } from "../components/ui/CategoryIcon";
+import { useAuthStore } from "../store/authStore";
+import { formatAmount, getCurrencySymbol } from "../lib/currency";
 import { cn } from "../lib/cn";
 
 interface EditState {
@@ -27,6 +29,9 @@ export function Budgets() {
   const [yearMonth, setYearMonth] = useState(currentMonth);
   const [modalOpen, setModalOpen] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
+  const currency = useAuthStore((s) => s.user?.base_currency ?? "RUB");
+  const symbol = getCurrencySymbol(currency);
+  const fmt = (v: number | string) => `${formatAmount(v, currency)} ${symbol}`;
 
   const { data: progress = [], isLoading } = useBudgetProgress(yearMonth);
   const { data: categories = [] } = useCategories("expense");
@@ -83,7 +88,7 @@ export function Budgets() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm text-slate-500">
-                    {Number(bp.spent_amount).toLocaleString("ru-RU")} / {Number(bp.budget_amount).toLocaleString("ru-RU")} ₽
+                    {fmt(bp.spent_amount)} / {fmt(bp.budget_amount)}
                   </span>
                   <Button variant="ghost" size="sm" onClick={() => openEdit(bp)}>
                     <Pencil size={13} />
@@ -109,7 +114,7 @@ export function Budgets() {
               <div className="flex justify-between mt-2">
                 <span className="text-xs text-slate-400">{Math.round(bp.percent_used)}%</span>
                 <span className={cn("text-xs font-medium", Number(bp.remaining) < 0 ? "text-red-500" : "text-emerald-600")}>
-                  Остаток: {Number(bp.remaining).toLocaleString("ru-RU")} ₽
+                  Остаток: {fmt(bp.remaining)}
                 </span>
               </div>
             </div>

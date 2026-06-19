@@ -7,6 +7,7 @@ import {
   RefreshCw,
   FolderInput,
   ScrollText,
+  Settings,
   Wallet,
   X,
 } from "lucide-react";
@@ -20,6 +21,7 @@ const navItems = [
   { to: "/recurring-rules", label: "Повторяющиеся", icon: RefreshCw },
   { to: "/import-export", label: "Импорт / Экспорт", icon: FolderInput },
   { to: "/audit-log", label: "Журнал", icon: ScrollText },
+  { to: "/settings", label: "Настройки", icon: Settings },
 ];
 
 interface Props {

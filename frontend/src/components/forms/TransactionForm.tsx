@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "../ui/Button";
 import { useCategories } from "../../hooks/useCategories";
 import { useCreateTransaction, useUpdateTransaction } from "../../hooks/useTransactions";
+import { useAuthStore } from "../../store/authStore";
+import { SUPPORTED_CURRENCIES } from "../../lib/currency";
 import type { Transaction, TransactionType } from "../../types";
 
 interface Props {
@@ -9,15 +11,15 @@ interface Props {
   onClose?: () => void;
 }
 
-const CURRENCIES = ["RUB", "USD", "EUR", "CNY", "GBP"];
 const today = new Date().toISOString().slice(0, 10);
 
 export function TransactionForm({ initialValues, onClose }: Props) {
+  const baseCurrency = useAuthStore((s) => s.user?.base_currency ?? "RUB");
   const [type, setType] = useState<TransactionType>(initialValues?.type ?? "expense");
   const [date, setDate] = useState(initialValues?.date ?? today);
   const [categoryId, setCategoryId] = useState(initialValues?.category_id ?? "");
   const [amount, setAmount] = useState(initialValues?.amount ?? "");
-  const [currency, setCurrency] = useState(initialValues?.currency ?? "RUB");
+  const [currency, setCurrency] = useState(initialValues?.currency ?? baseCurrency);
   const [exchangeRate, setExchangeRate] = useState(initialValues?.exchange_rate ?? "1");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function TransactionForm({ initialValues, onClose }: Props) {
         <div>
           <label className="label">Валюта</label>
           <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-            {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+            {SUPPORTED_CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
           </select>
         </div>
       </div>

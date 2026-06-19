@@ -4,6 +4,8 @@ import { PageShell } from "../components/layout/PageShell";
 import { PieChart } from "../components/charts/PieChart";
 import { LineChart } from "../components/charts/LineChart";
 import { useDashboardSummary, useExpensesByCategory, useTrend, useTopCategories } from "../hooks/useDashboard";
+import { useAuthStore } from "../store/authStore";
+import { formatAmount, getCurrencySymbol } from "../lib/currency";
 import { cn } from "../lib/cn";
 
 function currentYearMonth() {
@@ -12,21 +14,22 @@ function currentYearMonth() {
 
 export function Dashboard() {
   const [yearMonth, setYearMonth] = useState(currentYearMonth());
+  const currency = useAuthStore((s) => s.user?.base_currency ?? "RUB");
+  const symbol = getCurrencySymbol(currency);
 
   const { data: summary } = useDashboardSummary(yearMonth);
   const { data: pieData = [] } = useExpensesByCategory(yearMonth);
   const { data: trendData = [] } = useTrend();
   const { data: topData = [] } = useTopCategories(yearMonth);
 
-  const fmt = (v: string | number | undefined) =>
-    v !== undefined ? Number(v).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—";
+  const fmt = (v: string | number | undefined) => `${formatAmount(v, currency)} ${symbol}`;
 
   const balance = Number(summary?.balance ?? 0);
 
   const summaryCards = [
     {
       label: "Доходы",
-      value: `${fmt(summary?.total_income)} ₽`,
+      value: fmt(summary?.total_income),
       icon: TrendingUp,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
@@ -34,7 +37,7 @@ export function Dashboard() {
     },
     {
       label: "Расходы",
-      value: `${fmt(summary?.total_expense)} ₽`,
+      value: fmt(summary?.total_expense),
       icon: TrendingDown,
       iconBg: "bg-red-50",
       iconColor: "text-red-600",
@@ -42,7 +45,7 @@ export function Dashboard() {
     },
     {
       label: "Баланс",
-      value: `${fmt(summary?.balance)} ₽`,
+      value: fmt(summary?.balance),
       icon: Scale,
       iconBg: balance >= 0 ? "bg-indigo-50" : "bg-red-50",
       iconColor: balance >= 0 ? "text-indigo-600" : "text-red-600",
@@ -84,13 +87,13 @@ export function Dashboard() {
           <h3 className="text-sm font-semibold text-slate-800 mb-4">Расходы по категориям</h3>
           {pieData.length === 0
             ? <div className="text-slate-400 text-sm py-16 text-center">Нет данных</div>
-            : <PieChart data={pieData} />}
+            : <PieChart data={pieData} currency={currency} />}
         </div>
         <div className="card p-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-4">Динамика за 6 месяцев</h3>
           {trendData.length === 0
             ? <div className="text-slate-400 text-sm py-16 text-center">Нет данных</div>
-            : <LineChart data={trendData} />}
+            : <LineChart data={trendData} currency={currency} />}
         </div>
       </div>
 
@@ -113,7 +116,7 @@ export function Dashboard() {
                   <span className="text-sm font-medium text-slate-700">{item.category_name}</span>
                 </div>
                 <span className="text-sm font-semibold text-red-500">
-                  {Number(item.amount).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                  {fmt(item.amount)}
                 </span>
               </div>
             ))}

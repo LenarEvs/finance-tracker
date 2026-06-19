@@ -715,3 +715,61 @@ FastAPI `HTTPBearer` по умолчанию возвращает 403 при о�
 [report/PROMPTS.md](PROMPTS.md)
 
 ---
+## 2026-06-19 — Страница «Настройки» и мультивалютность в UI
+
+### Сделано
+
+**Backend:**
+- `backend/app/schemas/user.py` — добавлен `email: EmailStr | None` в `UserUpdateRequest`
+- `backend/app/routers/users.py` — в `PATCH /users/me` добавлена проверка уникальности email (409, если email уже занят другим пользователем)
+
+**Frontend:**
+- `frontend/src/lib/currency.ts` — утилита с маппингом 10 валют (`RUB, USD, EUR, GBP, CNY, JPY, TRY, KZT, BYN, UAH`): `getCurrencySymbol()`, `formatAmount()`, `SUPPORTED_CURRENCIES`
+- `frontend/src/api/users.ts` — методы `getMe`, `updateMe`, `changePassword`
+- `frontend/src/pages/Settings.tsx` — новая страница с тремя вкладками: «Профиль» (имя, email), «Безопасность» (смена пароля с валидацией), «Валюта» (grid-выбор валюты, активная подсвечена)
+- `frontend/src/App.tsx` — добавлен маршрут `/settings`
+- `frontend/src/components/layout/Sidebar.tsx` — добавлен пункт «Настройки» с иконкой `Settings`
+- `frontend/src/pages/Dashboard.tsx` — убран хардкод `₽`, используются `formatAmount`/`getCurrencySymbol` из auth store
+- `frontend/src/pages/Budgets.tsx` — аналогично Dashboard
+- `frontend/src/components/charts/LineChart.tsx` — принимает проп `currency`, подставляет символ в тултипы и ось Y
+- `frontend/src/components/charts/PieChart.tsx` — принимает проп `currency`, подставляет символ в тултипы
+
+### Ключевые решения
+
+- Валюта читается из `useAuthStore(s => s.user?.base_currency)` — после сохранения настроек `setUser` обновляет стор, и все компоненты мгновенно реагируют без перезагрузки
+- Смена валюты на Settings → PATCH /users/me → `setUser(res.data)` → Dashboard/Budgets/Charts перерисовываются реактивно
+- Графики получают `currency` как проп из Dashboard — не обращаются к auth store напрямую (более переиспользуемо)
+- Flash-сообщения (успех/ошибка) в Settings самоскрываются через 3.5 сек
+
+### Открытые вопросы
+
+- Email change не требует подтверждения по почте — допустимо для текущего этапа, но стоит добавить в будущем
+
+## 2026-06-19 — Унификация списка валют + фикс сборки
+
+### Проблемы
+
+1. **Сборка Docker падала**: `tsc -b` ругался на неиспользуемый импорт `getCurrencySymbol` в `Settings.tsx` (TS6133, `noUnusedLocals`) — `vite build` даже не запускался. Исправлено удалением лишнего импорта.
+2. **Расхождение списков валют**: `lib/currency.ts` определял 10 валют (`SUPPORTED_CURRENCIES`), но `TransactionForm.tsx` и `RecurringRules.tsx` имели собственные хардкод-списки `["RUB", "USD", "EUR", "CNY", "GBP"]` — добавление транзакции/повторяющейся операции не показывало новые валюты (JPY, TRY, KZT, BYN, UAH).
+
+### Сделано
+
+- `frontend/src/components/forms/TransactionForm.tsx` — локальный `CURRENCIES` удалён, селект валюты рендерится из `SUPPORTED_CURRENCIES` (`lib/currency.ts`); дефолт для новой транзакции — `base_currency` пользователя вместо хардкода `RUB`
+- `frontend/src/pages/RecurringRules.tsx` — аналогично: единый список валют, дефолт — `base_currency` пользователя
+
+### Решение
+
+Единственный источник правды по валютам — `frontend/src/lib/currency.ts` (`SUPPORTED_CURRENCIES`). Любая форма с выбором валюты должна импортировать его, а не заводить свой список.
+
+## 2026-06-19 — Фикс форматирования сумм в графиках (без 2 знаков после запятой)
+
+### Проблема
+
+В тултипах и подписях оси Y `LineChart.tsx`/`PieChart.tsx` суммы отображались без дробной части (например, `123,444` вместо `123,444.00`). Причина — при унификации валют (предыдущий фикс) хардкод `.toLocaleString("ru-RU")` был заменён на `.toLocaleString()` без опций, и `minimumFractionDigits`/`maximumFractionDigits: 2` потерялись.
+
+### Сделано
+
+- `frontend/src/components/charts/LineChart.tsx` — тултип и ось Y используют `formatAmount(value, currency)` из `lib/currency.ts` вместо сырого `toLocaleString()`
+- `frontend/src/components/charts/PieChart.tsx` — аналогично для тултипа
+
+Теперь все суммы в Dashboard, Budgets и графиках идут через единую функцию `formatAmount()`, гарантирующую 2 знака после запятой независимо от локали валюты.

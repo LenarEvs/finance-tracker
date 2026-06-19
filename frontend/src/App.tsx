@@ -8,6 +8,7 @@ import { ImportExport } from "./pages/ImportExport";
 import { Login } from "./pages/Login";
 import { RecurringRules } from "./pages/RecurringRules";
 import { Register } from "./pages/Register";
+import { Settings } from "./pages/Settings";
 import { Transactions } from "./pages/Transactions";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,14 @@ export function App() {
           element={
             <RequireAuth>
               <AuditLog />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <Settings />
             </RequireAuth>
           }
         />

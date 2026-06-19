@@ -10,14 +10,17 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import type { MonthlyTrend } from "../../types";
+import { formatAmount, getCurrencySymbol } from "../../lib/currency";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
 interface Props {
   data: MonthlyTrend[];
+  currency?: string;
 }
 
-export function LineChart({ data }: Props) {
+export function LineChart({ data, currency = "RUB" }: Props) {
+  const symbol = getCurrencySymbol(currency);
   const chartData = {
     labels: data.map((d) => d.month),
     datasets: [
@@ -61,7 +64,7 @@ export function LineChart({ data }: Props) {
       tooltip: {
         callbacks: {
           label: (ctx: { dataset: { label?: string }; parsed: { y: number | null } }) =>
-            `${ctx.dataset.label}: ${(ctx.parsed.y ?? 0).toLocaleString("ru-RU")} ₽`,
+            `${ctx.dataset.label}: ${formatAmount(ctx.parsed.y ?? 0, currency)} ${symbol}`,
         },
       },
     },
@@ -76,7 +79,7 @@ export function LineChart({ data }: Props) {
         ticks: {
           color: "#94a3b8",
           font: { size: 11 },
-          callback: (v: string | number) => Number(v).toLocaleString("ru-RU"),
+          callback: (v: string | number) => `${formatAmount(Number(v), currency)} ${symbol}`,
         },
         border: { display: false },
       },

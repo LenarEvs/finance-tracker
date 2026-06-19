@@ -5,10 +5,10 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { useRecurringRules, useCreateRecurringRule, useUpdateRecurringRule, useDeleteRecurringRule } from "../hooks/useRecurringRules";
 import { useCategories } from "../hooks/useCategories";
+import { useAuthStore } from "../store/authStore";
+import { SUPPORTED_CURRENCIES } from "../lib/currency";
 import type { RecurringRule, TransactionType } from "../types";
 import { cn } from "../lib/cn";
-
-const CURRENCIES = ["RUB", "USD", "EUR", "CNY", "GBP"];
 
 export function RecurringRules() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -105,10 +105,11 @@ export function RecurringRules() {
 
 function RuleForm({ initialValues, onClose }: { initialValues: RecurringRule | null; onClose: () => void }) {
   const isEditing = !!initialValues;
+  const baseCurrency = useAuthStore((s) => s.user?.base_currency ?? "RUB");
   const [type, setType] = useState<TransactionType>(initialValues?.type ?? "expense");
   const [categoryId, setCategoryId] = useState(initialValues?.category_id ?? "");
   const [amount, setAmount] = useState(initialValues?.amount ?? "");
-  const [currency, setCurrency] = useState(initialValues?.currency ?? "RUB");
+  const [currency, setCurrency] = useState(initialValues?.currency ?? baseCurrency);
   const [dayOfMonth, setDayOfMonth] = useState(String(initialValues?.day_of_month ?? "1"));
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -165,7 +166,7 @@ function RuleForm({ initialValues, onClose }: { initialValues: RecurringRule | n
           <div>
             <label className="label">Валюта</label>
             <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-              {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+              {SUPPORTED_CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
             </select>
           </div>
         )}

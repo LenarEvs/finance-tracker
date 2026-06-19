@@ -266,7 +266,8 @@ finance-tracker/
 │   │   │   ├── Budgets.tsx
 │   │   │   ├── RecurringRules.tsx
 │   │   │   ├── ImportExport.tsx
-│   │   │   └── AuditLog.tsx
+│   │   │   ├── AuditLog.tsx
+│   │   │   └── Settings.tsx             # Profile, password, base currency
 │   │   │
 │   │   ├── store/                   # Zustand stores
 │   │   │   ├── authStore.ts
@@ -321,7 +322,7 @@ Auth: `Authorization: Bearer <JWT>` on all routes except `/auth/*`
 | Method | Path | Description |
 |---|---|---|
 | GET | `/users/me` | Get current user profile |
-| PATCH | `/users/me` | Update full_name, base_currency |
+| PATCH | `/users/me` | Update full_name, email, base_currency |
 | PATCH | `/users/me/password` | Change password |
 
 ### 3.3 Categories

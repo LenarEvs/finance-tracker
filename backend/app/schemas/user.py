@@ -17,6 +17,7 @@ class UserResponse(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     full_name: str | None = None
+    email: EmailStr | None = None
     base_currency: str | None = None
 
 

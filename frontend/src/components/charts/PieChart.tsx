@@ -1,6 +1,7 @@
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 import type { ExpenseByCategory } from "../../types";
+import { formatAmount, getCurrencySymbol } from "../../lib/currency";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -11,9 +12,11 @@ const COLORS = [
 
 interface Props {
   data: ExpenseByCategory[];
+  currency?: string;
 }
 
-export function PieChart({ data }: Props) {
+export function PieChart({ data, currency = "RUB" }: Props) {
+  const symbol = getCurrencySymbol(currency);
   const chartData = {
     labels: data.map((d) => d.category_name),
     datasets: [
@@ -39,7 +42,7 @@ export function PieChart({ data }: Props) {
       tooltip: {
         callbacks: {
           label: (ctx: { label: string; parsed: number }) =>
-            ` ${ctx.label}: ${ctx.parsed.toLocaleString("ru-RU")} ₽`,
+            ` ${ctx.label}: ${formatAmount(ctx.parsed, currency)} ${symbol}`,
         },
       },
     },

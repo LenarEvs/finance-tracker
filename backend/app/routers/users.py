@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from passlib.context import CryptContext
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_current_user, get_db
@@ -24,7 +25,14 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    for field, value in body.model_dump(exclude_unset=True).items():
+    updates = body.model_dump(exclude_unset=True)
+    if "email" in updates and updates["email"] != current_user.email:
+        conflict = await db.scalar(
+            select(User).where(User.email == updates["email"]).where(User.id != current_user.id)
+        )
+        if conflict:
+            raise HTTPException(status_code=409, detail="Email already in use")
+    for field, value in updates.items():
         setattr(current_user, field, value)
     current_user.updated_at = datetime.now(timezone.utc)
     await db.commit()
