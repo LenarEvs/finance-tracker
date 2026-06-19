@@ -17,7 +17,7 @@ async def test_import_csv_dry_run(client: AsyncClient, auth_headers: dict):
     }, headers=auth_headers)
     cat_id = cat_resp.json()["id"]
 
-    csv_content = f"date,type,amount,currency,exchange_rate,category_id,description\n2026-01-10,expense,1500,RUB,1,{cat_id},Test import\n"
+    csv_content = f"date,type,amount,currency,exchange_rate,category,description\n2026-01-10,expense,1500,RUB,1,{cat_id},Test import\n"
     files = {"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")}
     resp = await client.post(
         "/api/v1/import-export/import?dry_run=true",
@@ -37,7 +37,7 @@ async def test_import_csv_commit(client: AsyncClient, auth_headers: dict):
     }, headers=auth_headers)
     cat_id = cat_resp.json()["id"]
 
-    csv_content = f"date,type,amount,currency,exchange_rate,category_id,description\n2026-02-20,income,3000,RUB,1,{cat_id},Imported income\n"
+    csv_content = f"date,type,amount,currency,exchange_rate,category,description\n2026-02-20,income,3000,RUB,1,{cat_id},Imported income\n"
     files = {"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")}
     resp = await client.post(
         "/api/v1/import-export/import?dry_run=false",

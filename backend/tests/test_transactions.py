@@ -42,7 +42,7 @@ async def test_list_transactions(client: AsyncClient, auth_headers: dict):
     }, headers=auth_headers)
     resp = await client.get("/api/v1/transactions", headers=auth_headers)
     assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
+    assert isinstance(resp.json()["items"], list)
 
 
 @pytest.mark.asyncio
@@ -92,7 +92,7 @@ async def test_transaction_filter_by_amount_range(client: AsyncClient, auth_head
     resp = await client.get("/api/v1/transactions?amount_min=200&amount_max=1000", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
-    amounts = [float(t["amount"]) for t in data]
+    amounts = [float(t["amount"]) for t in data["items"]]
     assert 500.0 in amounts
     assert 100.0 not in amounts
     assert 2000.0 not in amounts
@@ -110,4 +110,4 @@ async def test_transaction_filter_by_type(client: AsyncClient, auth_headers: dic
     }, headers=auth_headers)
     resp = await client.get("/api/v1/transactions?type=income", headers=auth_headers)
     assert resp.status_code == 200
-    assert all(t["type"] == "income" for t in resp.json())
+    assert all(t["type"] == "income" for t in resp.json()["items"])

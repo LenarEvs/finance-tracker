@@ -699,3 +699,14 @@ nginx-1 | host not found in upstream "frontend" in /etc/nginx/conf.d/default.con
 ```
 
 **Результат:** Backend: новая схема `CurrencyChangeRequest` (`base_currency`, `conversion_rate`) в `schemas/user.py`; `base_currency` убран из общего `UserUpdateRequest`, чтобы валюта менялась только через выделенный путь с пересчётом. Новый эндпоинт `PATCH /users/me/currency` в `routers/users.py`: bulk UPDATE по `Transaction.exchange_rate` (если `currency == new_base` → `1`, иначе `old_exchange_rate / rate`) и по `Budget.amount` (всегда `amount / rate`, т.к. у бюджетов нет своего курса); `amount`/`currency` транзакций не трогаются (GENERATED-колонка `amount_base` пересчитывается автоматически в БД). Frontend: `usersApi.changeCurrency()`, в `Settings.tsx` — модалка подтверждения с предупреждением и полем ввода курса («1 NEW = ? OLD»), после успеха инвалидация react-query кэшей `["dashboard"]`/`["budgets"]`.
+
+## P-039 · 2026-06-19 · Фикс CI: pytest падал на main
+
+**Назначение:** Пайплайн CI (job `backend-lint-and-test`) падал на main (run #19) на шаге `pytest`. Линтер `ruff` проходил, ломались только тесты.
+
+**Промпт:**
+```
+не работает pipline github ci исправь
+```
+
+**Результат:** Причина — тесты не были обновлены вслед за двумя предыдущими фичами: (1) commit `8042926` добавил пагинацию в `GET /api/v1/transactions` (ответ `{items, page, pages, total}` вместо плоского списка), но `test_transactions.py` ещё ожидал список напрямую (`test_list_transactions`, `test_transaction_filter_by_amount_range`, `test_transaction_filter_by_type`); (2) commit `f9017e3` сменил дефолтное имя колонки категории в CSV-импорте с `category_id` на `category` (с резолвом по имени), а `test_import_export.py` всё ещё слал колонку `category_id` — строки молча скипались (`created == 0`). Воспроизвёл падение локально, поднял Postgres 16 и Python 3.12 в Docker по образцу `.github/workflows/ci.yml`, получил идентичные 5 failed. Обновил `backend/tests/test_transactions.py` (читать `resp.json()["items"]`) и `backend/tests/test_import_export.py` (заголовок CSV `category` вместо `category_id`). Повторный прогон: `ruff check` чисто, `pytest` — 21 passed.

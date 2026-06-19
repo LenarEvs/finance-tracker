@@ -817,3 +817,27 @@ FastAPI `HTTPBearer` по умолчанию возвращает 403 при о�
 - `Transaction.exchange_rate` (ветка else) → `GREATEST(exchange_rate / rate, 0.000001)`
 
 Гарантирует отсутствие падений независимо от того, насколько мал результат деления, при сохранении максимально точного представимого значения.
+
+## 2026-06-19 — Фикс CI: тесты не успевали за изменениями API
+
+### Проблема
+
+GitHub Actions на main (run #19, коммит `7d52823`) падал на шаге `pytest` job'а `backend-lint-and-test`. Внешне коммит про конвертацию валют не трогал тесты и не выглядел причиной — пришлось поднимать CI-окружение локально (Docker: Postgres 16-alpine + Python 3.12-slim с теми же переменными, что и в `.github/workflows/ci.yml`), чтобы увидеть реальный traceback.
+
+### Диагноз
+
+Падение оказалось накопленным долгом от двух более ранних коммитов, тесты которых не обновили вслед за изменением API:
+
+1. **`8042926`** (пагинация) — `GET /api/v1/transactions` стал возвращать `Page` (`{items, total, page, pages}`) вместо плоского списка. `test_transactions.py` в трёх местах продолжал делать `resp.json()` и сразу итерировать/проверять как список → `TypeError: string indices must be integers` и `assert isinstance(..., list)` падали.
+2. **`f9017e3`** (категории по имени в CSV-импорте) — дефолтное имя колонки категории в `import_csv` сменилось с `category_id` на `category` (с резолвом по имени и фоллбэком на UUID). `test_import_export.py` всё ещё присылал CSV с колонкой `category_id` → колонка `category` не находилась, `raw_cat` был пустым, строка молча скипалась (`created == 0` вместо `1`).
+
+Оба случая — не баг в проде, а тесты, зафиксировавшие старый контракт API. Откатывать фичи не было причины: пагинация и резолв категорий по имени — осознанные и уже задокументированные изменения (BUG-01 в `bugs.md`, P-038 в `report/PROMPTS.md`).
+
+### Решение
+
+- `backend/tests/test_transactions.py` — три теста (`test_list_transactions`, `test_transaction_filter_by_amount_range`, `test_transaction_filter_by_type`) переключены на чтение `resp.json()["items"]`.
+- `backend/tests/test_import_export.py` — заголовок CSV в `test_import_csv_dry_run` и `test_import_csv_commit` сменён с `category_id` на `category` (значение в колонке осталось UUID — резолв по `category_by_id` как fallback это поддерживает).
+
+### Проверка
+
+Локально через Docker (Postgres 16-alpine + Python 3.12-slim, переменные окружения как в workflow): `ruff check app/ tests/` — чисто, `pytest -v` — 21 passed (было 5 failed / 16 passed).
