@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { User, Lock, Globe, Check } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { User, Lock, Globe, Check, AlertTriangle } from "lucide-react";
 import { PageShell } from "../components/layout/PageShell";
 import { Button } from "../components/ui/Button";
+import { Modal } from "../components/ui/Modal";
 import { useAuthStore } from "../store/authStore";
 import { usersApi } from "../api/users";
-import { SUPPORTED_CURRENCIES } from "../lib/currency";
+import { SUPPORTED_CURRENCIES, getCurrencySymbol } from "../lib/currency";
 import { cn } from "../lib/cn";
 
 type Tab = "profile" | "security" | "currency";
@@ -13,7 +14,14 @@ type Tab = "profile" | "security" | "currency";
 export function Settings() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
+  const currentCurrency = user?.base_currency ?? "RUB";
+
+  // Currency change form
+  const [pendingCurrency, setPendingCurrency] = useState<string | null>(null);
+  const [conversionRate, setConversionRate] = useState("");
+  const [currencyError, setCurrencyError] = useState("");
 
   // Profile form
   const [fullName, setFullName] = useState(user?.full_name ?? "");
@@ -78,8 +86,41 @@ export function Settings() {
     passwordMutation.mutate({ current_password: currentPassword, new_password: newPassword });
   }
 
-  function handleCurrencySelect(code: string) {
-    updateMutation.mutate({ base_currency: code });
+  const changeCurrencyMutation = useMutation({
+    mutationFn: usersApi.changeCurrency,
+    onSuccess: (res) => {
+      setUser(res.data);
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["budgets"] });
+      setPendingCurrency(null);
+      setConversionRate("");
+      setCurrencyError("");
+      flash("Валюта изменена, суммы пересчитаны");
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      setCurrencyError(err.response?.data?.detail ?? "Ошибка при смене валюты");
+    },
+  });
+
+  function handleCurrencyClick(code: string) {
+    if (code === currentCurrency) return;
+    setPendingCurrency(code);
+    setConversionRate("");
+    setCurrencyError("");
+  }
+
+  function handleCurrencyConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    const rate = Number(conversionRate.replace(",", "."));
+    if (!conversionRate || !(rate > 0)) {
+      setCurrencyError("Введите курс больше нуля");
+      return;
+    }
+    setCurrencyError("");
+    changeCurrencyMutation.mutate({
+      base_currency: pendingCurrency!,
+      conversion_rate: conversionRate.replace(",", "."),
+    });
   }
 
   const tabs = [
@@ -204,16 +245,16 @@ export function Settings() {
             <div>
               <h2 className="text-sm font-semibold text-slate-800 mb-1">Базовая валюта</h2>
               <p className="text-xs text-slate-400 mb-4">
-                Применяется к Дашборду и Бюджетам. Все суммы отображаются в выбранной валюте.
+                Применяется к Дашборду и Бюджетам. Транзакции остаются в своей исходной валюте.
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {SUPPORTED_CURRENCIES.map(({ code, symbol, name }) => {
-                  const isActive = (user?.base_currency ?? "RUB") === code;
+                  const isActive = currentCurrency === code;
                   return (
                     <button
                       key={code}
-                      onClick={() => handleCurrencySelect(code)}
-                      disabled={updateMutation.isPending}
+                      onClick={() => handleCurrencyClick(code)}
+                      disabled={changeCurrencyMutation.isPending}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-lg border text-sm transition-colors text-left",
                         isActive
@@ -235,6 +276,52 @@ export function Settings() {
           )}
         </div>
       </div>
+
+      {/* Currency change confirmation modal */}
+      <Modal
+        open={pendingCurrency !== null}
+        onClose={() => { setPendingCurrency(null); setCurrencyError(""); }}
+        title="Смена базовой валюты"
+      >
+        {pendingCurrency && (
+          <form onSubmit={handleCurrencyConfirm} className="space-y-4">
+            <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 border border-amber-200 px-3.5 py-3 text-xs text-amber-800">
+              <AlertTriangle size={15} className="flex-shrink-0 mt-0.5" />
+              <span>
+                Суммы во всех бюджетах и на дашборде будут пересчитаны по указанному курсу.
+                Сами транзакции (сумма и валюта каждой операции) изменены не будут.
+              </span>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">
+                Курс: 1 {pendingCurrency} ({getCurrencySymbol(pendingCurrency)}) = ? {currentCurrency} ({getCurrencySymbol(currentCurrency)})
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                autoFocus
+                className="input w-full"
+                placeholder="например, 73.36"
+                value={conversionRate}
+                onChange={(e) => setConversionRate(e.target.value)}
+              />
+            </div>
+            {currencyError && <p className="text-xs text-red-500">{currencyError}</p>}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => { setPendingCurrency(null); setCurrencyError(""); }}
+              >
+                Отмена
+              </Button>
+              <Button type="submit" disabled={changeCurrencyMutation.isPending}>
+                {changeCurrencyMutation.isPending ? "Применение…" : "Подтвердить"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </PageShell>
   );
 }

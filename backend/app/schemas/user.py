@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserResponse(BaseModel):
@@ -18,9 +19,13 @@ class UserResponse(BaseModel):
 class UserUpdateRequest(BaseModel):
     full_name: str | None = None
     email: EmailStr | None = None
-    base_currency: str | None = None
 
 
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class CurrencyChangeRequest(BaseModel):
+    base_currency: str = Field(min_length=3, max_length=3)
+    conversion_rate: Decimal = Field(gt=0)

@@ -322,7 +322,8 @@ Auth: `Authorization: Bearer <JWT>` on all routes except `/auth/*`
 | Method | Path | Description |
 |---|---|---|
 | GET | `/users/me` | Get current user profile |
-| PATCH | `/users/me` | Update full_name, email, base_currency |
+| PATCH | `/users/me` | Update full_name, email |
+| PATCH | `/users/me/currency` | Change base_currency; body includes `conversion_rate` (old→new) used to re-base all existing budgets (`amount`) and transaction `exchange_rate` (transactions already in the new currency get `exchange_rate=1`, amount/currency unchanged) |
 | PATCH | `/users/me/password` | Change password |
 
 ### 3.3 Categories
